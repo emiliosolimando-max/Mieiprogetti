@@ -4,7 +4,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 SRC = sys.argv[1]
 OUT = sys.argv[2]
 EMO = 'emo/f/package/assets/'
-W, H, FPS = 1080, 1440, 30
+REEL = len(sys.argv) > 3 and sys.argv[3] == '9:16'
+W, H, FPS = (1080, 1920, 30) if REEL else (1080, 1440, 30)
+# Reels: keep header/subs clear of Instagram's top bar and bottom caption/buttons
+HEADER_Y, CARD_CY, SUB_BOTTOM = (190, 860, 430) if REEL else (60, 640, 140)
 DUR = 11.54
 ORANGE = (217, 119, 87)
 F_BLACK = '/usr/share/fonts/opentype/inter/Inter-Black.otf'
@@ -118,7 +121,7 @@ def draw_title(frame, t):
     size = (size_big + (size_small - size_big) * p) * (0.6 + 0.4 * pop)
     f = font(F_BLACK, max(10, int(size)))
     # big: two lines centred; small: one line at top
-    y_big, y_small = H / 2 - size_big * 1.15, 60
+    y_big, y_small = H / 2 - size_big * 1.15, HEADER_Y
     if p < 0.5:
         lines = [('CLAUDE', (255, 255, 255)), ('CODE', ORANGE)]
         lh = size * 1.08
@@ -160,7 +163,7 @@ def draw_subs(frame, t):
             lines.append(cur); cur, cw = [], 0
         cw += (space if cur else 0) + w; cur.append(k)
     lines.append(cur)
-    y = H - 140 - 110 * len(lines)
+    y = H - SUB_BOTTOM - 110 * len(lines)
     fade_in = ease((t - (ws[0][1] - 0.15)) / 0.2)
     pad = 26
     for line in lines:
@@ -198,12 +201,12 @@ def draw_card(frame, t):
             sh = Image.new('RGBA', (cw + 80, ch + 80), (0, 0, 0, 0))
             ImageDraw.Draw(sh).rounded_rectangle((40, 50, cw + 40, ch + 50), 56, fill=(0, 0, 0, int(140 * p_out)))
             sh = sh.filter(ImageFilter.GaussianBlur(22))
-            cx, cy = W // 2, 640
+            cx, cy = W // 2, CARD_CY
             frame.alpha_composite(sh, (cx - cw // 2 - 40, cy - ch // 2 - 40))
             frame.alpha_composite(c, (cx - cw // 2, cy - ch // 2))
 
 dec = subprocess.Popen(['ffmpeg', '-v', 'error', '-i', SRC, '-vf',
-                        f'fps={FPS},scale={W}:{H}:flags=lanczos', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+                        f'fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H}', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
                        stdout=subprocess.PIPE)
 enc = subprocess.Popen(['ffmpeg', '-y', '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}',
                         '-r', str(FPS), '-i', '-', '-i', SRC, '-map', '0:v', '-map', '1:a:0', '-c:v', 'libx264',
