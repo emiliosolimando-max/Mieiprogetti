@@ -32,6 +32,10 @@ PESO_TITOLO = 800                  # 800 = ExtraBold
 PESO_SOTTOTITOLI = 600             # 600 = SemiBold
 LINGUA = "it"
 MODELLO_WHISPER = "large-v3"
+# Alternativa se faster-whisper non riesce a scaricare il modello (es. HuggingFace bloccato):
+# cartella di un modello Whisper di sherpa-onnx (github.com/k2-fsa/sherpa-onnx/releases, tag asr-models)
+MOTORE_TRASCRIZIONE = "auto"        # "auto" | "faster-whisper" | "sherpa-onnx"
+SHERPA_MODELLO = "modelli/sherpa-onnx-whisper-turbo"   # None se non c'è
 INQUADRATURA = "auto"              # "auto" | "ritaglio" (crop sul volto) | "sfocato" (sfondo sfocato)
 
 # Cartello finale (lasciare CHIUSURA_TITOLO = "" per non metterlo)
@@ -59,6 +63,7 @@ SUB_MAX_CARATTERI = 32
 TICKER_VELOCITA = 110     # px/s
 IMG_INTERVALLO_MIN = 5.0  # secondi minimi tra l'inizio di due immagini (spec: 4–6)
 IMG_ANTICIPO = 0.15
+IMG_INIZIO_MIN = 1.5      # niente immagini mentre entra il titolo
 IMG_DURATA_MIN, IMG_DURATA_MAX = 2.5, 4.0
 NUM_DURATA = 2.0
 
@@ -293,7 +298,28 @@ def trascrivi(src, durata):
     out_json = BASE / "output" / "trascrizione.json"
     wav = BASE / "output" / "_audio_16k.wav"
     print("→ Estraggo l'audio per la trascrizione")
-    esegui(["ffmpeg", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", str(wav)])
+    esegui(["ffmpeg", "-y", "-i", str(src), "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", str(wav)])
+    dati = None
+    if MOTORE_TRASCRIZIONE in ("auto", "faster-whisper"):
+        try:
+            dati = _trascrivi_faster_whisper(wav, durata)
+        except Exception as e:
+            if MOTORE_TRASCRIZIONE == "faster-whisper" or not SHERPA_MODELLO:
+                raise
+            print(f"   ! faster-whisper non disponibile ({str(e)[:120]}): uso sherpa-onnx")
+    if dati is None:
+        dati = _trascrivi_sherpa(wav, durata)
+    out_json.write_text(json.dumps(dati, ensure_ascii=False, indent=1), encoding="utf-8")
+    import pysubs2
+    srt = pysubs2.SSAFile()
+    for s in dati["segmenti"]:
+        srt.append(pysubs2.SSAEvent(start=int(s["inizio"] * 1000), end=int(s["fine"] * 1000), text=s["testo"]))
+    srt.save(str(BASE / "output" / "trascrizione.srt"))
+    wav.unlink(missing_ok=True)
+    return dati
+
+
+def _trascrivi_faster_whisper(wav, durata):
     from faster_whisper import WhisperModel
     try:
         import ctranslate2
@@ -315,13 +341,236 @@ def trascrivi(src, durata):
         dati["segmenti"].append({"inizio": r3(s.start), "fine": r3(s.end), "testo": s.text.strip(),
                                  "parole": parole})
         print(f"   [{fmt_t(s.start)}] {s.text.strip()}")
-    out_json.write_text(json.dumps(dati, ensure_ascii=False, indent=1), encoding="utf-8")
-    import pysubs2
-    srt = pysubs2.SSAFile()
-    for s in dati["segmenti"]:
-        srt.append(pysubs2.SSAEvent(start=int(s["inizio"] * 1000), end=int(s["fine"] * 1000), text=s["testo"]))
-    srt.save(str(BASE / "output" / "trascrizione.srt"))
-    wav.unlink(missing_ok=True)
+    return dati
+
+
+def _sillabe(w):
+    return max(1, len(re.findall(r"[aeiouàèéìòóù]+", w.lower()))) + (0.5 if re.search(r"\d", w) else 0)
+
+
+def _voce(a, sr=16000):
+    """Maschera voce/silenzio a 10 ms e livello in dB."""
+    import numpy as np
+    hop = sr // 100
+    n = len(a) // hop
+    rms = np.sqrt(np.mean(a[:n * hop].reshape(n, hop) ** 2, axis=1) + 1e-12)
+    db = 20 * np.log10(rms)
+    soglia = max(np.percentile(db, 15) + 8, np.percentile(db, 95) - 30)
+    voce = np.convolve(db > soglia, np.ones(5) / 5, mode="same") > 0.3
+    return voce, db
+
+
+def _corse(voce, i0, i1, pausa_min=22):
+    """Tratti continui di voce fra i0 e i1 separati da pause ≥ pausa_min (×10 ms)."""
+    corse, k = [], i0
+    while k < i1:
+        while k < i1 and not voce[k]:
+            k += 1
+        if k >= i1:
+            break
+        a_, sil = k, 0
+        while k < i1 and sil < pausa_min:
+            sil = sil + 1 if not voce[k] else 0
+            k += 1
+        corse.append((a_, k - sil))
+    return corse
+
+
+def _pezzi_lunghi(voce, db, max_len=2400):
+    """Pezzi fino a ~24 s tagliati nelle pause più lunghe (Whisper lavora meglio con contesto)."""
+    import numpy as np
+    n = len(voce)
+    pezzi, inizio = [], 0
+    while inizio < n:
+        while inizio < n and not voce[inizio]:
+            inizio += 1
+        if inizio >= n:
+            break
+        if n - inizio <= max_len:
+            pezzi.append((inizio, n))
+            break
+        fin = inizio + max_len
+        # taglio al centro della pausa più lunga nella seconda metà della finestra
+        migliore, k, best_len = None, inizio + max_len // 2, 0
+        while k < fin:
+            if not voce[k]:
+                j = k
+                while j < fin and not voce[j]:
+                    j += 1
+                if j - k > best_len:
+                    best_len, migliore = j - k, (k + j) // 2
+                k = j
+            k += 1
+        if migliore is None:
+            migliore = inizio + max_len // 2 + int(np.argmin(db[inizio + max_len // 2:fin]))
+        pezzi.append((inizio, migliore))
+        inizio = migliore
+    return pezzi
+
+
+def _allinea(parole, corse):
+    """Assegna le parole ai tratti di voce: i confini fra tratti cadono dove la quota di sillabe pronunciate
+    corrisponde alla quota di tempo parlato, preferendo la punteggiatura. Poi distribuisce dentro ogni tratto."""
+    pesi = [_sillabe(p) + 0.4 for p in parole]
+    n, k = len(parole), len(corse)
+    cumw = [0.0]
+    for p in pesi:
+        cumw.append(cumw[-1] + p)
+    durate = [b - a for a, b in corse]
+    tot_t = sum(durate)
+    cumt, acc = [], 0
+    for d_ in durate[:-1]:
+        acc += d_
+        cumt.append(acc / tot_t)
+    inf = float("inf")
+    # dp[j][i]: costo migliore mettendo il confine j dopo la parola i
+    dp = [[inf] * (n + 1) for _ in range(k)]
+    da = [[0] * (n + 1) for _ in range(k)]
+    dp[0][0] = 0.0
+    for j in range(1, k):
+        for i in range(n + 1):
+            c = abs(cumw[i] / cumw[-1] - cumt[j - 1])
+            if 0 < i < n and re.search(r"[.,;:!?…]$", parole[i - 1]):
+                c -= 0.03
+            best = min(range(i + 1), key=lambda q: dp[j - 1][q])
+            dp[j][i], da[j][i] = dp[j - 1][best] + c, best
+    fine = min(range(n + 1), key=lambda i: dp[k - 1][i] if k > 1 else (0 if i == 0 else inf))
+    confini = [n]
+    i = fine
+    for j in range(k - 1, 0, -1):
+        confini.append(i)
+        i = da[j][i]
+    confini = sorted(confini) if k > 1 else [n]
+    out, prima = [], 0
+    for (a_, b_), c in zip(corse, confini):
+        gruppo = list(range(prima, c))
+        prima = c
+        if not gruppo:
+            continue
+        tw = sum(pesi[g] for g in gruppo)
+        t, durata = a_, b_ - a_
+        for g in gruppo:
+            dt = durata * pesi[g] / tw
+            out.append({"w": parole[g], "start": r3(t / 100), "end": r3((t + dt) / 100), "prob": None})
+            t += dt
+    return out
+
+
+def _trascrivi_sherpa(wav, durata):
+    """Whisper via sherpa-onnx (onnxruntime). Non dà i tempi delle parole: trascrivo tratti brevi tagliati
+    nelle pause e distribuisco le parole sul parlato del tratto in proporzione alle sillabe."""
+    import wave
+    import numpy as np
+    import sherpa_onnx
+    d = Path(SHERPA_MODELLO)
+    d = d if d.is_absolute() else BASE / d
+    enc = sorted(d.glob("*encoder.int8.onnx")) or sorted(d.glob("*encoder.onnx"))
+    dec = sorted(d.glob("*decoder.int8.onnx")) or sorted(d.glob("*decoder.onnx"))
+    tok = sorted(d.glob("*tokens.txt"))
+    print(f"→ Trascrivo con sherpa-onnx ({d.name})")
+    rec = sherpa_onnx.OfflineRecognizer.from_whisper(encoder=str(enc[0]), decoder=str(dec[0]), tokens=str(tok[0]),
+                                                     language=LINGUA, task="transcribe",
+                                                     num_threads=os.cpu_count() or 4,
+                                                     enable_segment_timestamps=True)
+    with wave.open(str(wav)) as w:
+        a = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32768
+    voce, db = _voce(a)
+    dati = {"lingua": LINGUA, "modello": f"sherpa-onnx {d.name}", "durata": durata, "segmenti": [],
+            "nota": "tempi: frasi dai timestamp di Whisper, parole stimate sui tratti di voce (sillabe)"}
+
+    def frasi(i0, i1, livello=0):
+        """Frasi con i loro tempi (timestamp di segmento di Whisper); le frasi lunghe vengono ridecodificate."""
+        m0 = max(0, i0 - 20)
+        st = rec.create_stream()
+        st.accept_waveform(16000, a[m0 * 160:min(len(a), (i1 + 20) * 160)])
+        rec.decode_stream(st)
+        r = st.result
+        if not r.segment_texts:
+            return [(i0, i1, r.text)]
+        out = []
+        for t, du, tx in zip(r.segment_timestamps, r.segment_durations, r.segment_texts):
+            f0 = max(i0, int(round(m0 + t * 100)))
+            f1 = min(i1, int(round(m0 + (t + du) * 100)))
+            if f1 - f0 > 550 and livello < 2:
+                sotto = frasi(f0, f1, livello + 1)
+                if len(sotto) > 1:
+                    out += sotto
+                    continue
+            out.append((f0, f1, tx))
+        return out
+
+    def decodifica(i0, i1):
+        st = rec.create_stream()
+        st.accept_waveform(16000, a[max(0, i0 - 10) * 160:min(len(a), (i1 + 10) * 160)])
+        rec.decode_stream(st)
+        return st.result.text
+
+    def lettere(t):
+        return re.sub(r"[^a-z]", "", senza_accenti(t.lower()))
+
+    def ancora(parole, corse):
+        """Assegna ogni parola al tratto di voce in cui il riconoscimento del solo tratto ritrova le sue lettere."""
+        unite = []                                     # tratti troppo brevi uniti al vicino
+        for c in corse:
+            if unite and (c[1] - c[0] < 35 or unite[-1][1] - unite[-1][0] < 35):
+                unite[-1] = (unite[-1][0], c[1])
+            else:
+                unite.append(c)
+        if len(unite) < 2:
+            return None, unite
+        lb, chi = "", []
+        for k, (c0, c1) in enumerate(unite):
+            t = lettere(decodifica(c0, c1))
+            lb += t
+            chi += [k] * len(t)
+        la, di = "", []
+        for i, w in enumerate(parole):
+            t = lettere(w)
+            la += t
+            di += [i] * len(t)
+        sm = difflib.SequenceMatcher(None, la, lb, autojunk=False)
+        voti = [dict() for _ in parole]
+        trovate = 0
+        for blk in sm.get_matching_blocks():
+            for t in range(blk.size):
+                v = voti[di[blk.a + t]]
+                k = chi[blk.b + t]
+                v[k] = v.get(k, 0) + 1
+                trovate += 1
+        if not la or trovate < 0.35 * len(la):
+            return None, unite
+        ass = [max(v, key=v.get) if v else None for v in voti]
+        noti = [i for i, x in enumerate(ass) if x is not None]
+        for i in range(len(ass)):
+            if ass[i] is None:
+                prima = max((j for j in noti if j < i), default=None)
+                dopo = min((j for j in noti if j > i), default=None)
+                ass[i] = ass[prima] if prima is not None else ass[dopo]
+        for i in range(1, len(ass)):                   # monotonia, togliendo i salti all'indietro
+            ass[i] = max(ass[i], ass[i - 1])
+        return ass, unite
+
+    out = []
+    for i0, i1 in _pezzi_lunghi(voce, db):
+        for f0, f1, tx in frasi(i0, i1):
+            parole = re.sub(r"\[[^\]]*\]?", "", tx).split()
+            if not parole:
+                continue
+            corse = _corse(voce, f0, f1, pausa_min=18) or [(f0, f1)]
+            ass, unite = ancora(parole, corse)
+            if ass is None:
+                gruppo = _allinea(parole, _corse(voce, f0, f1) or [(f0, f1)])
+            else:
+                gruppo = []
+                for k, c in enumerate(unite):
+                    sel = [w for w, x in zip(parole, ass) if x == k]
+                    if sel:
+                        gruppo += _allinea(sel, [c])
+            out += gruppo
+            dati["segmenti"].append({"inizio": gruppo[0]["start"], "fine": gruppo[-1]["end"],
+                                     "testo": " ".join(parole), "parole": gruppo})
+            print(f"   [{fmt_t(f0 / 100)}–{fmt_t(f1 / 100)}] {' '.join(parole)}"
+                  f"{'' if ass is not None else '  (tempi stimati per sillabe)'}")
     return dati
 
 
@@ -332,6 +581,8 @@ CORREZIONI = {
     "inps": "INPS", "inail": "INAIL", "isee": "ISEE", "naspi": "NASpI", "imu": "IMU", "irpef": "IRPEF",
     "iva": "IVA", "tfr": "TFR", "pil": "PIL", "istat": "ISTAT", "bce": "BCE", "ue": "UE", "asl": "ASL",
     "spid": "SPID", "pec": "PEC", "caf": "CAF", "tari": "TARI", "rai": "RAI", "covid": "Covid",
+    "inpdap": "INPDAP", "ims": "INPS", "imsi": "INPS", "imps": "INPS", "imsdap": "INPDAP", "impdap": "INPDAP",
+    "quescenza": "quiescenza", "quiescienza": "quiescenza",
     "carabinieri": "Carabinieri", "carabiniere": "Carabiniere", "ministero": "Ministero",
     "parlamento": "Parlamento", "senato": "Senato", "inps.it": "INPS.it",
     "agenzia delle entrate": "Agenzia delle Entrate", "guardia di finanza": "Guardia di Finanza",
@@ -635,14 +886,15 @@ CONCETTI = [
     ("arretrati", ["arretrat\\w*", "rimbors\\w*"], "euro money banknotes"),
     ("domanda", ["domand[ae]", "richiest[ae]", "istanz[ae]", "ricors[oi]"], "filling application form"),
     ("patronato", ["patronat[oi]", "caf", "consulent[ei]", "avvocat[oi]", "espert[oi]"], "consultant office meeting"),
-    ("verifica", ["verific\\w*", "controll\\w*", "error[ei]", "sbagliat\\w*"], "checking documents magnifying glass"),
+    ("verifica", ["verific\\w*", "controll\\w*"], "checking documents magnifying glass"),
+    ("errori", ["error[ei]", "sbagliat\\w*", "anomali[ae]"], "mistake warning documents"),
     ("scadenza", ["scadenz[ae]", "prescrizion\\w*", "termin[ie] di legge"], "calendar deadline"),
     ("assegno", ["assegn[oi] pensionistic\\w*", "importo", "import[io] della pension\\w*"], "pension money euro"),
     ("busta_paga", ["bust[ae] pag[ah]e?", "stipend\\w*", "salar\\w*", "cedolin\\w*"], "payslip salary money"),
     ("agenzia_entrate", ["agenzia delle entrate", "fisco", "fiscal\\w*", "tass[ae]", "impost[ae]", "irpef",
                          "dichiarazione dei redditi", "730", "cartell[ae] esattorial[ei]"], "tax documents calculator"),
     ("inps", ["inps"], "government office counter queue"),
-    ("pensionati", ["pension\\w*", "anzian[io]", "terza eta"], "elderly couple park bench"),
+    ("pensionati", ["pensionat[aeio]", "pensioni", "anzian[io]", "terza eta"], "elderly couple park bench"),
     ("assegno_unico", ["assegno unico", "bonus", "isee"], "family budget euro money"),
     ("carabinieri", ["carabinier[ei]"], "italian police patrol car"),
     ("polizia", ["polizia", "poliziott\\w*", "forze dell'?ordine", "questur\\w*", "arrest\\w*"],
@@ -738,6 +990,8 @@ def scegli_immagini(parole, durata):
         if c["concetto"] in usati:
             continue
         inizio = max(0.0, c["t"] - IMG_ANTICIPO)
+        if inizio < IMG_INIZIO_MIN:
+            continue
         if scelte and (inizio - scelte[-1]["inizio"] < IMG_INTERVALLO_MIN
                        or inizio < scelte[-1]["inizio"] + scelte[-1]["durata"] + 0.2):
             continue
@@ -827,7 +1081,7 @@ def cerca_pexels(img, usati_id):
 
 
 ICONE = {"ricalcolo": "calcolatrice", "contributi": "documento", "arretrati": "euro", "domanda": "documento",
-         "patronato": "ufficio", "verifica": "lente", "scadenza": "calendario", "assegno": "euro",
+         "patronato": "ufficio", "verifica": "lente", "errori": "attenzione", "scadenza": "calendario", "assegno": "euro",
          "pensionati": "persone", "inps": "ufficio", "busta_paga": "documento", "agenzia_entrate": "documento",
          "soldi": "euro", "assegno_unico": "euro", "legge": "documento", "governo": "ufficio",
          "ministero": "ufficio", "tribunale": "ufficio", "comune": "ufficio", "banca": "euro",
@@ -881,6 +1135,11 @@ def _disegna_icona(d, tipo, cx, cy, r, col, acc):
             d.ellipse((hx - hr, cy - r * .55 - hr, hx + hr, cy - r * .55 + hr), fill=col)
             d.pieslice((hx - r * .42, cy - r * .2, hx + r * .42, cy + r * .9), 180, 360, fill=col)
         d.rectangle((cx - r * .85, cy + r * .38, cx + r * .85, cy + r * .48), fill=acc)
+    elif tipo == "attenzione":
+        d.polygon([(cx, cy - r * .85), (cx + r * .92, cy + r * .72), (cx - r * .92, cy + r * .72)], outline=col,
+                  width=w)
+        d.rounded_rectangle((cx - r * .09, cy - r * .35, cx + r * .09, cy + r * .28), radius=r * .05, fill=acc)
+        d.ellipse((cx - r * .1, cy + r * .4, cx + r * .1, cy + r * .6), fill=acc)
     else:  # info
         d.ellipse((cx - r * .85, cy - r * .85, cx + r * .85, cy + r * .85), outline=col, width=w)
         d.ellipse((cx - r * .1, cy - r * .55, cx + r * .1, cy - r * .35), fill=acc)
