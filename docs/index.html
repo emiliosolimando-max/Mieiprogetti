@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Solimando Real Estate</title>
+<meta name="description" content="Corso gratuito: come acquistare immobili direttamente dalle banche, bypassando le aste giudiziarie. A cura di Solimando Real Estate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: hero a due colonne (promessa + scheda Revalto), tre percorsi su griglia, Revalto, iscrizione, FAQ */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --ink:#13232B; --muted:#55666D; --line:#D5DDDC;
+  --petrol:#0E4A57; --petrol-soft:#E1EDEE; --amber:#C9821B; --warn:#B4541E; --on-petrol:#F3F8F8;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1619; --surface:#152328; --ink:#E6EEEE; --muted:#97A8AC; --line:#26383E;
+  --petrol:#5FB3C2; --petrol-soft:#16343B; --amber:#E3A24A; --warn:#E58A55; --on-petrol:#0B1A1E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1619; --surface:#152328; --ink:#E6EEEE; --muted:#97A8AC; --line:#26383E;
+  --petrol:#5FB3C2; --petrol-soft:#16343B; --amber:#E3A24A; --warn:#E58A55; --on-petrol:#0B1A1E; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.6 var(--f-body)}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.08;letter-spacing:-.01em}
+h2{font-size:clamp(28px,4vw,42px);font-weight:700}
+h3{font-size:21px;font-weight:700}
+p{margin:0}
+a{color:var(--petrol)}
+.eyebrow{font:500 12.5px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--petrol)}
+section{padding-block:clamp(56px,8vw,96px)}
+.sec-head{display:grid;gap:14px;max-width:62ch;margin-bottom:40px}
+.sec-head p{color:var(--muted)}
+
+.top{border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.logo-mark{width:38px;height:38px;border-radius:6px;background:var(--petrol);color:var(--on-petrol);display:grid;place-items:center;font:800 20px/1 var(--f-display)}
+.logo-text{display:grid;line-height:1.05}
+.logo-text b{font:800 17px/1.05 var(--f-display);letter-spacing:.02em}
+.logo-text span{font:500 10.5px/1.2 var(--f-mono);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 15px/1 var(--f-body);padding:14px 22px;border-radius:6px;border:1.5px solid var(--petrol);background:var(--petrol);color:var(--on-petrol);text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:var(--petrol)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.top .btn{padding:10px 16px;font-size:14px}
+
+.hero{padding-block:clamp(48px,7vw,88px) clamp(56px,8vw,96px)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(32px,5vw,72px);align-items:center}
+.hero h1{font-size:clamp(38px,5.6vw,70px);font-weight:800;letter-spacing:-.025em;margin-block:18px 22px}
+.hero h1 em{font-style:normal;color:var(--petrol)}
+.hero .lead{font-size:clamp(18px,1.6vw,20px);color:var(--muted);max-width:54ch;margin-bottom:32px}
+.free{display:inline-block;background:var(--amber);color:#1B1206;font:700 12px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-radius:3px}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 40px -24px rgba(14,74,87,.35);overflow:hidden}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);font:500 12.5px/1.2 var(--f-mono);color:var(--muted)}
+.card-h strong{color:var(--ink);font-weight:500}
+.card-b{padding:24px 20px;display:grid;gap:18px}
+.big{display:grid;gap:4px}
+.big b{font:800 clamp(56px,7vw,84px)/.95 var(--f-display);letter-spacing:-.03em;color:var(--petrol);font-variant-numeric:tabular-nums}
+.big span{font-size:15px;color:var(--muted)}
+.card ul{list-style:none;margin:0;padding:0;display:grid}
+.card li{padding-block:10px;border-top:1px dashed var(--line);font-size:15px;display:flex;gap:10px}
+.card li::before{content:"";flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--amber)}
+
+.paths{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.path{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px;display:grid;gap:12px;align-content:start}
+.path .tag{font:500 12px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.path p{color:var(--muted);font-size:16px}
+.note{margin-top:28px;background:var(--petrol-soft);border-radius:10px;padding:22px 26px;font:500 clamp(17px,1.6vw,20px)/1.45 var(--f-display);max-width:70ch}
+
+.rv{background:var(--surface);border-block:1px solid var(--line)}
+.rv .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,5vw,64px);align-items:center}
+.rv .sec-head{margin-bottom:0}
+.rv-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.rv-list li{padding-block:18px;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.rv-list b{font:700 18px/1.3 var(--f-display)}
+.rv-list span{color:var(--muted);font-size:15.5px}
+
+.signup .wrap>div{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,5vw,64px);align-items:start}
+.side{display:grid;gap:18px}
+.side p{color:var(--muted)}
+form{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:clamp(20px,3vw,32px);display:grid;gap:16px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:grid;gap:6px;font-size:14px;font-weight:600}
+input,select{font:400 16px/1.4 var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:11px 12px;width:100%}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:13.5px;color:var(--muted)}
+.check input{width:auto;margin-top:3px;flex:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.msg{font-size:15px;padding:12px 14px;border-radius:6px;background:var(--petrol-soft)}
+.msg.err{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+
+details{border-bottom:1px solid var(--line);padding-block:18px}
+details:first-of-type{border-top:1px solid var(--line)}
+summary{cursor:pointer;font:600 18px/1.3 var(--f-display);list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--petrol)}
+details[open] summary::after{content:"–"}
+details p{color:var(--muted);margin-top:10px;max-width:68ch}
+
+footer{border-top:1px solid var(--line);padding-block:28px;font-size:13.5px;color:var(--muted)}
+footer .wrap{display:grid;gap:8px}
+
+@media (max-width:860px){
+  .hero .wrap,.rv .wrap,.signup .wrap>div{grid-template-columns:1fr}
+  .paths{grid-template-columns:1fr}
+}
+@media (max-width:480px){.row2{grid-template-columns:1fr} .top .btn{display:none}}
+@media (prefers-reduced-motion:no-preference){
+  .card{animation:rise .7s cubic-bezier(.2,.7,.2,1) both .15s}
+  @keyframes rise{from{transform:translateY(14px)}to{transform:none}}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="Solimando Real Estate">
+      <span class="logo-mark" aria-hidden="true">S</span>
+      <span class="logo-text"><b>SOLIMANDO</b><span>Real Estate</span></span>
+    </a>
+    <a class="btn" href="#iscrizione">Iscriviti gratis</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="free">Corso gratuito</span>
+        <h1>Come acquistare immobili <em>direttamente dalle banche</em>, bypassando le aste giudiziarie</h1>
+        <p class="lead">Ti spieghiamo come si investe nei crediti deteriorati (NPL) con immobili a garanzia, anche se parti da zero. In base al tuo obiettivo ti indichiamo poi il percorso di formazione professionale più adatto a te.</p>
+        <div class="cta-row">
+          <a class="btn" href="#iscrizione">Iscriviti al corso gratuito</a>
+          <a class="btn ghost" href="#percorsi">A chi è rivolto</a>
+        </div>
+      </div>
+
+      <div class="card" aria-label="Il portafoglio del gestionale Revalto">
+        <div class="card-h"><strong>Gestionale Revalto</strong><span>Portafoglio NPL</span></div>
+        <div class="card-b">
+          <div class="big"><b>2.600</b><span>posizioni bancarie NPL circa, già caricate nel gestionale</span></div>
+          <ul>
+            <li>Crediti deteriorati ceduti dalle banche</li>
+            <li>Immobili a garanzia, prima che finiscano all'asta</li>
+            <li>Ogni posizione analizzata e consultabile</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="percorsi" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">A chi è rivolto</span>
+        <h2>Un corso per chi vuole investire, in qualunque punto parta</h2>
+        <p>Parleremo dell'investimento che un investitore può fare acquistando il credito dalla banca, invece di aspettare l'asta giudiziaria.</p>
+      </div>
+      <div class="paths">
+        <article class="path"><span class="tag">Parti da zero</span><h3>Non hai mai investito in NPL</h3><p>Ti spieghiamo da dove si comincia, come funziona l'acquisto del credito e cosa serve per fare la prima operazione.</p></article>
+        <article class="path"><span class="tag">Operazione spot</span><h3>Vuoi fare una singola operazione</h3><p>Vediamo come scegliere la posizione giusta e portare a termine un investimento, senza impegni continuativi.</p></article>
+        <article class="path"><span class="tag">Collaborazione</span><h3>Vuoi collaborare professionalmente</h3><p>Sei un professionista o vuoi diventarlo: ti presentiamo come lavorare con noi in modo stabile.</p></article>
+      </div>
+      <p class="note">In base al tuo profilo, dopo il corso costruiamo insieme la formazione professionale più adatta a te.</p>
+    </div>
+  </section>
+
+  <section class="rv" id="revalto">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Il gestionale Revalto</span>
+        <h2>Circa 2.600 posizioni NPL delle banche, in un unico gestionale</h2>
+        <p>Durante il corso ti presentiamo Revalto, il gestionale in cui sono allocate oggi circa 2.600 posizioni bancarie NPL. È lo strumento con cui individuiamo e seguiamo le opportunità di investimento.</p>
+      </div>
+      <ul class="rv-list">
+        <li><b>Le posizioni disponibili</b><span>Crediti ceduti dalle banche, con l'immobile che li garantisce.</span></li>
+        <li><b>Come si sceglie un'operazione</b><span>Cosa guardare in una posizione prima di investire.</span></li>
+        <li><b>Come si segue fino alla fine</b><span>Lo stato di ogni posizione, dall'acquisto del credito all'immobile.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="signup" id="iscrizione">
+    <div class="wrap">
+      <div>
+        <div class="side">
+          <span class="eyebrow">Iscrizione gratuita</span>
+          <h2>Riserva il tuo posto</h2>
+          <p>Lascia i tuoi dati: ti ricontattiamo per confermare la partecipazione e inviarti tutte le informazioni sul corso.</p>
+        </div>
+        <form id="form-iscrizione" data-mode="live" novalidate>
+          <div class="row2">
+            <label for="nome">Nome<input id="nome" name="nome" autocomplete="given-name" required></label>
+            <label for="cognome">Cognome<input id="cognome" name="cognome" autocomplete="family-name" required></label>
+          </div>
+          <div class="row2">
+            <label for="email">Email<input id="email" name="email" type="email" autocomplete="email" required></label>
+            <label for="cellulare">Cellulare<input id="cellulare" name="cellulare" type="tel" autocomplete="tel" inputmode="tel" required></label>
+          </div>
+          <label for="profilo">Cosa ti interessa di più
+            <select id="profilo" name="profilo" required>
+              <option value="">Seleziona</option>
+              <option>Parto da zero</option>
+              <option>Fare un'operazione spot</option>
+              <option>Collaborare professionalmente</option>
+            </select>
+          </label>
+          <label class="hp" for="sito" aria-hidden="true">Non compilare<input id="sito" name="_honey" tabindex="-1" autocomplete="off"></label>
+          <label class="check" for="privacy"><input id="privacy" name="privacy" type="checkbox" required> <span>Acconsento al trattamento dei miei dati da parte di Solimando Real Estate, al solo scopo di essere ricontattato per il corso e per i percorsi di formazione. Posso chiederne la cancellazione in qualsiasi momento scrivendo a emilio.solimando@libero.it.</span></label>
+          <button class="btn" type="submit" id="invia">Iscriviti al corso gratuito</button>
+          <p class="msg" id="esito" role="status" hidden></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top:0">
+    <div class="wrap" style="max-width:860px">
+      <div class="sec-head"><span class="eyebrow">Domande frequenti</span><h2>Prima di iscriverti</h2></div>
+      <details open><summary>Non ho esperienza, posso partecipare?</summary><p>Sì. Il corso è pensato anche per chi parte da zero.</p></details>
+      <details><summary>Il corso è gratuito?</summary><p>Sì, è totalmente gratuito.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap"><span>Solimando Real Estate · Corso gratuito sull'acquisto di immobili dalle banche tramite NPL</span></div>
+</footer>
+
+<script>
+(function(){
+  var DEST = 'https://formsubmit.co/ajax/emilio.solimando@libero.it';
+  var form = document.getElementById('form-iscrizione');
+  var esito = document.getElementById('esito');
+  var invia = document.getElementById('invia');
+
+  function show(text, err){ esito.textContent = text; esito.className = 'msg' + (err ? ' err' : ''); esito.hidden = false; }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = function(id){ return (document.getElementById(id).value || '').trim(); };
+    var dati = { nome: v('nome'), cognome: v('cognome'), email: v('email'), cellulare: v('cellulare'), profilo: v('profilo') };
+    if(!dati.nome || !dati.cognome){ show('Inserisci nome e cognome.', true); return; }
+    if(!/^\S+@\S+\.\S+$/.test(dati.email)){ show('Inserisci un indirizzo email valido.', true); return; }
+    if(dati.cellulare.replace(/\D/g,'').length < 8){ show('Inserisci un numero di cellulare valido.', true); return; }
+    if(!dati.profilo){ show('Scegli cosa ti interessa di più.', true); return; }
+    if(!document.getElementById('privacy').checked){ show('Per iscriverti serve il consenso al trattamento dei dati.', true); return; }
+    if(v('sito')) return;
+
+    if(form.dataset.mode !== 'live'){
+      show("Questa è l'anteprima: il modulo invia le iscrizioni solo dalla pagina pubblica.", true);
+      return;
+    }
+
+    invia.disabled = true; invia.textContent = 'Invio in corso…';
+    fetch(DEST, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject: 'Nuova iscrizione corso NPL: ' + dati.nome + ' ' + dati.cognome,
+        _template: 'table',
+        _replyto: dati.email,
+        Nome: dati.nome, Cognome: dati.cognome, Email: dati.email, Cellulare: dati.cellulare, Interesse: dati.profilo
+      })
+    }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+      .then(function(res){
+        if(res.ok && String(res.j.success) === 'true'){
+          form.reset();
+          show('Grazie ' + dati.nome + ', iscrizione ricevuta. Ti ricontatteremo a breve.');
+        } else {
+          show("L'iscrizione non è stata inviata. Riprova tra qualche minuto.", true);
+        }
+      })
+      .catch(function(){ show("L'iscrizione non è stata inviata. Controlla la connessione e riprova.", true); })
+      .then(function(){ invia.disabled = false; invia.textContent = 'Iscriviti al corso gratuito'; });
+  });
+})();
+</script>
+</body>
+</html>
