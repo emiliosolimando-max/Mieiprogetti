@@ -22,8 +22,9 @@ immagini (inizio, durata, file), numeri in evidenza, testo dei sottotitoli ("rig
 #  PARAMETRI — per un nuovo video di solito basta cambiare questi
 # =====================================================================
 FILE_SORGENTE = None   # es. "input/pensioni.mp4"; None = primo video trovato in ./input/
-TITOLO = "PENSIONI 2027: COSA CAMBIA"
-TICKER = "Segui la pagina per restare aggiornato • Condividi con chi può interessare •"
+TITOLO = "COME OTTENERE IL RICALCOLO DELLA PENSIONE"
+TICKER = ("Come ottenere il ricalcolo della pensione • Chiedi anche tu il ricalcolo • "
+          "Segui la pagina per restare aggiornato • Condividi con chi può interessare •")
 COLORE_PRINCIPALE = "#0B3D91"      # fascia titolo / ticker
 COLORE_EVIDENZIAZIONE = "#FFD400"  # parola pronunciata, numeri in evidenza
 FONT_FAMIGLIA = "Montserrat"       # scaricato da Google Fonts se manca
@@ -32,6 +33,14 @@ PESO_SOTTOTITOLI = 600             # 600 = SemiBold
 LINGUA = "it"
 MODELLO_WHISPER = "large-v3"
 INQUADRATURA = "auto"              # "auto" | "ritaglio" (crop sul volto) | "sfocato" (sfondo sfocato)
+
+# Cartello finale (lasciare CHIUSURA_TITOLO = "" per non metterlo)
+CHIUSURA_TITOLO = "RICALCOLO DELLE PENSIONI"
+CHIUSURA_TESTO = "Chiedi anche tu il ricalcolo"
+CHIUSURA_DURATA = 4.0     # secondi di cartello
+CHIUSURA_CODA = 2.0       # secondi aggiunti in fondo (ultimo fotogramma fermo) per leggerlo con calma
+# Se per un concetto non c'è né una foto tua né Pexels, crea una grafica (icona + parola chiave)
+GRAFICHE_SE_MANCA_FOTO = True
 
 # Correzioni aggiuntive per i sottotitoli: {"parola o frase minuscola": "Forma Corretta"}
 CORREZIONI_EXTRA = {}
@@ -621,6 +630,14 @@ def crea_blocchi(parole, mis, durata_video):
 # =====================================================================
 # (concetto, inneschi (regex su parola normalizzata; spazio = parole consecutive), query Pexels)
 CONCETTI = [
+    ("ricalcolo", ["ricalcol\\w*"], "calculator pension documents"),
+    ("contributi", ["contribut\\w*", "estratto conto", "versament\\w*"], "documents paperwork desk"),
+    ("arretrati", ["arretrat\\w*", "rimbors\\w*"], "euro money banknotes"),
+    ("domanda", ["domand[ae]", "richiest[ae]", "istanz[ae]", "ricors[oi]"], "filling application form"),
+    ("patronato", ["patronat[oi]", "caf", "consulent[ei]", "avvocat[oi]", "espert[oi]"], "consultant office meeting"),
+    ("verifica", ["verific\\w*", "controll\\w*", "error[ei]", "sbagliat\\w*"], "checking documents magnifying glass"),
+    ("scadenza", ["scadenz[ae]", "prescrizion\\w*", "termin[ie] di legge"], "calendar deadline"),
+    ("assegno", ["assegn[oi] pensionistic\\w*", "importo", "import[io] della pension\\w*"], "pension money euro"),
     ("busta_paga", ["bust[ae] pag[ah]e?", "stipend\\w*", "salar\\w*", "cedolin\\w*"], "payslip salary money"),
     ("agenzia_entrate", ["agenzia delle entrate", "fisco", "fiscal\\w*", "tass[ae]", "impost[ae]", "irpef",
                          "dichiarazione dei redditi", "730", "cartell[ae] esattorial[ei]"], "tax documents calculator"),
@@ -809,6 +826,99 @@ def cerca_pexels(img, usati_id):
     return None, None
 
 
+ICONE = {"ricalcolo": "calcolatrice", "contributi": "documento", "arretrati": "euro", "domanda": "documento",
+         "patronato": "ufficio", "verifica": "lente", "scadenza": "calendario", "assegno": "euro",
+         "pensionati": "persone", "inps": "ufficio", "busta_paga": "documento", "agenzia_entrate": "documento",
+         "soldi": "euro", "assegno_unico": "euro", "legge": "documento", "governo": "ufficio",
+         "ministero": "ufficio", "tribunale": "ufficio", "comune": "ufficio", "banca": "euro",
+         "famiglia": "persone", "giovani": "persone", "lavoro": "persone", "inflazione": "euro"}
+
+
+def _disegna_icona(d, tipo, cx, cy, r, col, acc):
+    """Icone vettoriali semplici (nessuna dipendenza esterna)."""
+    w = max(6, r // 9)
+    if tipo == "calcolatrice":
+        d.rounded_rectangle((cx - r * .62, cy - r * .85, cx + r * .62, cy + r * .85), radius=r * .12, outline=col, width=w)
+        d.rounded_rectangle((cx - r * .45, cy - r * .68, cx + r * .45, cy - r * .32), radius=r * .05, fill=acc)
+        for i in range(3):
+            for j in range(3):
+                x, y = cx - r * .38 + i * r * .38, cy - r * .06 + j * r * .3
+                d.rounded_rectangle((x - r * .13, y - r * .1, x + r * .13, y + r * .1), radius=r * .04, fill=col)
+    elif tipo == "documento":
+        x0, y0, x1, y1 = cx - r * .55, cy - r * .8, cx + r * .55, cy + r * .8
+        d.polygon([(x0, y0), (x1 - r * .3, y0), (x1, y0 + r * .3), (x1, y1), (x0, y1)], outline=col, width=w)
+        for k in range(4):
+            y = y0 + r * .5 + k * r * .25
+            d.line((x0 + r * .2, y, x1 - r * .2 - (r * .3 if k == 3 else 0), y), fill=col, width=w)
+        d.line((cx + r * .05, cy + r * .62, cx + r * .3, cy + r * .9, cx + r * .85, cy + r * .2), fill=acc, width=w * 2,
+               joint="curve")
+    elif tipo == "euro":
+        d.ellipse((cx - r * .85, cy - r * .85, cx + r * .85, cy + r * .85), outline=col, width=w)
+        d.arc((cx - r * .5, cy - r * .55, cx + r * .5, cy + r * .55), 40, 320, fill=acc, width=w * 2)
+        for dy in (-.12, .12):
+            d.line((cx - r * .62, cy + r * dy, cx + r * .1, cy + r * dy), fill=acc, width=w)
+    elif tipo == "calendario":
+        d.rounded_rectangle((cx - r * .8, cy - r * .65, cx + r * .8, cy + r * .8), radius=r * .1, outline=col, width=w)
+        d.rectangle((cx - r * .8, cy - r * .65, cx + r * .8, cy - r * .3), fill=col)
+        for x in (-.4, .4):
+            d.line((cx + r * x, cy - r * .85, cx + r * x, cy - r * .5), fill=acc, width=w * 2)
+        for i in range(4):
+            for j in range(3):
+                x, y = cx - r * .55 + i * r * .37, cy - r * .08 + j * r * .28
+                d.rectangle((x - r * .1, y - r * .08, x + r * .1, y + r * .08), fill=acc if (i, j) == (2, 1) else col)
+    elif tipo == "ufficio":
+        d.polygon([(cx - r * .9, cy - r * .35), (cx, cy - r * .9), (cx + r * .9, cy - r * .35)], fill=col)
+        for k in range(4):
+            x = cx - r * .6 + k * r * .4
+            d.rectangle((x - r * .08, cy - r * .25, x + r * .08, cy + r * .55), fill=col)
+        d.rectangle((cx - r * .9, cy + r * .62, cx + r * .9, cy + r * .78), fill=acc)
+    elif tipo == "lente":
+        d.ellipse((cx - r * .7, cy - r * .7, cx + r * .3, cy + r * .3), outline=col, width=w * 2)
+        d.line((cx + r * .15, cy + r * .15, cx + r * .75, cy + r * .75), fill=acc, width=w * 3)
+    elif tipo == "persone":
+        for dx, sc in ((-.38, .8), (.38, .8)):
+            hx, hr = cx + r * dx, r * .25 * sc / .8
+            d.ellipse((hx - hr, cy - r * .55 - hr, hx + hr, cy - r * .55 + hr), fill=col)
+            d.pieslice((hx - r * .42, cy - r * .2, hx + r * .42, cy + r * .9), 180, 360, fill=col)
+        d.rectangle((cx - r * .85, cy + r * .38, cx + r * .85, cy + r * .48), fill=acc)
+    else:  # info
+        d.ellipse((cx - r * .85, cy - r * .85, cx + r * .85, cy + r * .85), outline=col, width=w)
+        d.ellipse((cx - r * .1, cy - r * .55, cx + r * .1, cy - r * .35), fill=acc)
+        d.rectangle((cx - r * .09, cy - r * .2, cx + r * .09, cy + r * .55), fill=acc)
+
+
+def genera_grafica(img):
+    """Card grafica (sfondo nel colore principale, icona, parola chiave) quando manca una foto."""
+    from PIL import Image, ImageDraw
+    gw, gh = 1776, 1096
+    col, hl = hex_rgb(COLORE_PRINCIPALE), hex_rgb(COLORE_EVIDENZIAZIONE)
+    scuro = tuple(int(c * .45) for c in col)
+    g = Image.new("RGB", (gw, gh))
+    d = ImageDraw.Draw(g)
+    for y in range(gh):
+        p = y / gh
+        d.line((0, y, gw, y), fill=tuple(int(a * (1 - p) + b * p) for a, b in zip(col, scuro)))
+    for k, (x, y, rr) in enumerate(((1500, 120, 260), (1650, 980, 380), (150, 1050, 220))):
+        d.ellipse((x - rr, y - rr, x + rr, y + rr), outline=tuple(min(255, c + 40) for c in col), width=6)
+    cx, cy, r = 470, gh // 2, 330
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill="white")
+    _disegna_icona(d, ICONE.get(img["concetto"], "info"), cx, cy, int(r * .72), col, hl)
+    ft = str(next((BASE / "fonts").glob(f"*{NOMI_PESO[PESO_TITOLO]}.ttf")))
+    testo = re.sub(r"^(l|dell|all|nell|sull|un|d)'|^(il|lo|la|i|gli|le|un|uno|una) ", "", img["parola"],
+                   flags=re.I).upper()
+    ris = adatta_testo(ft, testo, 860, 520, 190, 70, 3)
+    if ris:
+        f, righe, passo, top, alt = ris
+        y0 = cy - alt / 2 - top
+        for k, riga in enumerate(righe):
+            d.text((880, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
+        d.rounded_rectangle((880, y0 + top + alt + 40, 1100, y0 + top + alt + 62), radius=11, fill=hl)
+    dest = BASE / "immagini" / "auto" / f"grafica_{img['concetto']}.png"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    g.save(dest)
+    return dest
+
+
 def risolvi_immagini(immagini):
     usati, usati_id = set(), set()
     fonti_auto = _fonti_auto()
@@ -824,6 +934,9 @@ def risolvi_immagini(immagini):
                 f, fonte = cerca_pexels(img, usati_id)
                 if f:
                     img["file"], img["fonte"] = str(f.relative_to(BASE)), fonte
+                elif GRAFICHE_SE_MANCA_FOTO:
+                    img["file"] = str(genera_grafica(img).relative_to(BASE))
+                    img["fonte"] = "grafica generata dallo script (icona + parola chiave)"
         if img["file"]:
             usati.add(str(BASE / img["file"]))
     righe = [f"Crediti immagini — {time.strftime('%d/%m/%Y')}", ""]
@@ -974,15 +1087,25 @@ def filtro_base(iv, inq, ingresso, uscita):
 # =====================================================================
 #  2) PIANO DI MONTAGGIO
 # =====================================================================
+def durata_uscita(piano):
+    return piano["durata"] + (CHIUSURA_CODA if CHIUSURA_TITOLO else 0.0)
+
+
+def inizio_chiusura(piano):
+    return durata_uscita(piano) - CHIUSURA_DURATA if CHIUSURA_TITOLO else None
+
+
 def crea_piano(src, iv, trascr, fonts):
     parole = [p for s in trascr["segmenti"] for p in s["parole"]]
     parole = normalizza_parole(parole)
     mis = Misuratore(fonts["sottotitoli"]["path"], SUB_FONT_PX)
     blocchi = crea_blocchi(parole, mis, iv["durata"])
     print("→ Cerco i concetti visivi e le immagini")
-    immagini = scegli_immagini(parole, iv["durata"])
+    # immagini e numeri devono finire prima del cartello finale
+    limite = iv["durata"] + CHIUSURA_CODA - CHIUSURA_DURATA - 0.3 if CHIUSURA_TITOLO else iv["durata"]
+    immagini = scegli_immagini(parole, limite)
     risolvi_immagini(immagini)
-    numeri = trova_numeri(parole, immagini, iv["durata"])
+    numeri = trova_numeri(parole, immagini, limite)
     print("→ Analizzo l'inquadratura (rilevamento volto)")
     inq = analizza_inquadratura(src, iv)
     piano = {
@@ -1010,12 +1133,18 @@ def mostra_piano(piano):
     inq = piano["inquadratura"]
     righe.append(f"## Piano di montaggio — {piano['sorgente']} ({fmt_t(piano['durata'])})\n")
     righe.append(f"**Inquadratura:** {inq['modalita']} — {inq['motivo']}\n")
+    righe.append(f"**Titolo fisso:** {TITOLO.upper()}  \n**Ticker:** {TICKER}\n")
+    if CHIUSURA_TITOLO:
+        righe.append(f"**Cartello finale:** da {fmt_t(inizio_chiusura(piano))} a {fmt_t(durata_uscita(piano))} — "
+                     f"«{CHIUSURA_TITOLO.upper()}» / «{CHIUSURA_TESTO.upper()}» "
+                     f"(+{CHIUSURA_CODA:.0f} s di fotogramma fermo in coda)\n")
     righe.append("### Immagini\n")
     righe.append("| # | Inizio | Durata | Parola chiave | Concetto | File / fonte |")
     righe.append("|---|---|---|---|---|---|")
     for i in piano["immagini"]:
         f = i["file"] or "**MANCANTE** (metti un file in ./immagini/ o imposta PEXELS_API_KEY)"
-        fonte = "" if not i["file"] else (" — Pexels" if "Pexels" in (i["fonte"] or "") else " — tua")
+        fonte = "" if not i["file"] else (" — Pexels" if "Pexels" in (i["fonte"] or "") else
+                                          " — grafica generata" if "grafica" in (i["fonte"] or "") else " — tua")
         righe.append(f"| {i['id']} | {fmt_t(i['inizio'])} | {i['durata']:.1f}s | «{i['parola']}» | "
                      f"{i['concetto']} | {f}{fonte} |")
     righe.append("\n### Numeri in evidenza\n")
@@ -1302,6 +1431,27 @@ class Grafica:
             card.alpha_composite(c, (self.P, self.P))
             self.numeri.append((n, card))
 
+        # --- cartello finale ---
+        self.chiusura = None
+        if CHIUSURA_TITOLO:
+            card = self.ombra.copy()
+            c = self.card_bianca.copy()
+            c.paste(Image.new("RGBA", (self.iw, self.ih), (*self.col, 255)), (b, b), self.mask_inner)
+            d = ImageDraw.Draw(c)
+            f1, r1, p1, t1, a1 = adatta_testo(ft, CHIUSURA_TITOLO.upper(), self.iw - 90, 250, 92, 40, 2)
+            f2, r2, p2, t2, a2 = adatta_testo(ft, CHIUSURA_TESTO.upper(), self.iw - 90, 170, 70, 30, 2)
+            spazio = 56
+            y = b + (self.ih - a1 - spazio - a2) / 2 - t1
+            for k, riga in enumerate(r1):
+                d.text((CARD_W / 2, y + k * p1), riga, font=f1, fill="white", anchor="ms")
+            ybar = y + t1 + a1 + spazio / 2
+            d.rounded_rectangle((CARD_W / 2 - 90, ybar - 5, CARD_W / 2 + 90, ybar + 5), radius=5, fill=(*self.hl, 255))
+            y2 = y + t1 + a1 + spazio - t2
+            for k, riga in enumerate(r2):
+                d.text((CARD_W / 2, y2 + k * p2), riga, font=f2, fill=(*self.hl, 255), anchor="ms")
+            card.alpha_composite(c, (self.P, self.P))
+            self.chiusura = (inizio_chiusura(piano), card)
+
         self.soglia = [0] * 17 + [255] * 239
         self.violazioni = []
 
@@ -1358,6 +1508,10 @@ class Grafica:
                 scala = 0.6 + 0.4 * ease_out_back(tl / 0.25)
                 alpha = clamp(tl / 0.12, 0, 1) * (clamp((n["durata"] - tl) / 0.25, 0, 1))
                 self._incolla_centro(f, self._scala_alpha(tela, scala, alpha))
+        if self.chiusura and t >= self.chiusura[0]:
+            tl = t - self.chiusura[0]
+            scala = 0.7 + 0.3 * ease_out_back(tl / 0.35)
+            self._incolla_centro(f, self._scala_alpha(self.chiusura[1], scala, clamp(tl / 0.15, 0, 1)))
         if controlla and t >= 0.5:
             bb = f.getchannel("A").point(self.soglia).getbbox()
             if bb and (bb[0] < SAFE[0] or bb[1] < SAFE[1] or bb[2] > SAFE[2] or bb[3] > SAFE[3]):
@@ -1416,16 +1570,19 @@ def filtro_audio(m):
 def renderizza(piano, fonts, ass_rel, dest, anteprima):
     src = piano["sorgente"]
     iv = info_video(BASE / src)
-    durata = min(piano["durata"], DURATA_ANTEPRIMA) if anteprima else piano["durata"]
+    durata = min(durata_uscita(piano), DURATA_ANTEPRIMA) if anteprima else durata_uscita(piano)
+    coda = durata_uscita(piano) - piano["durata"]
     n_frame = int(round(durata * FPS))
     loud = misura_loudness(src)
     graf = Grafica(piano, fonts)
     # 540x675 ha l'altezza dispari (non ammessa da yuv420p): aggiungo 1 px nero sotto → 540x676
     finale = f",scale={W // 2}:{H // 2}:flags=lanczos,pad={W // 2}:{H // 2 + 1}:0:0" if anteprima else ""
-    fc = (f"[0:v]setpts=PTS-STARTPTS,fps={FPS}[v0];" + filtro_base(iv, piano["inquadratura"], "[v0]", "[b]") + ";"
+    tpad = f",tpad=stop_mode=clone:stop_duration={coda + 0.5:.2f}" if coda > 0 else ""
+    apad = ",apad" if coda > 0 else ""
+    fc = (f"[0:v]setpts=PTS-STARTPTS,fps={FPS}{tpad}[v0];" + filtro_base(iv, piano["inquadratura"], "[v0]", "[b]") + ";"
           f"[1:v]setpts=PTS-STARTPTS[o];[b][o]overlay=0:0:format=gbrp:eof_action=pass,"
           f"ass={ass_rel}:fontsdir=fonts{finale},format=yuv420p[v];"
-          f"[0:a:0]asetpts=PTS-STARTPTS,{filtro_audio(loud)},aresample=48000[a]")
+          f"[0:a:0]asetpts=PTS-STARTPTS,{filtro_audio(loud)},aresample=48000{apad}[a]")
     if anteprima:
         venc = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-profile:v", "high"]
     else:
@@ -1493,7 +1650,7 @@ def controlla_risultato(piano, out, trascr, violazioni_grafica):
     cdir.mkdir(exist_ok=True)
     tav = Image.new("RGB", (3 * 360, 2 * 450), "black")
     for k in range(6):
-        t = piano["durata"] * (k + 0.5) / 6
+        t = durata_uscita(piano) * (k + 0.5) / 6
         fp = cdir / f"fotogramma_{k + 1}.jpg"
         esegui(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(out), "-frames:v", "1",
                 "-q:v", "3", str(fp)])
@@ -1503,6 +1660,9 @@ def controlla_risultato(piano, out, trascr, violazioni_grafica):
         if i["file"]:
             esegui(["ffmpeg", "-y", "-v", "error", "-ss", f"{i['inizio'] + 0.6:.2f}", "-i", str(out),
                     "-frames:v", "1", "-q:v", "4", str(cdir / f"immagine_{i['id']:02d}.jpg")])
+    if CHIUSURA_TITOLO:
+        esegui(["ffmpeg", "-y", "-v", "error", "-ss", f"{inizio_chiusura(piano) + 1:.2f}", "-i", str(out),
+                "-frames:v", "1", "-q:v", "4", str(cdir / "cartello_finale.jpg")])
     tav.save(cdir / "provino_6_fotogrammi.jpg", quality=88)
     report.append(f"{'fotogrammi':<12} output/controllo/provino_6_fotogrammi.jpg")
     # margini
