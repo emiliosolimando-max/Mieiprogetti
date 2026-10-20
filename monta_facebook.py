@@ -35,7 +35,8 @@ MODELLO_WHISPER = "large-v3"
 # Alternativa se faster-whisper non riesce a scaricare il modello (es. HuggingFace bloccato):
 # cartella di un modello Whisper di sherpa-onnx (github.com/k2-fsa/sherpa-onnx/releases, tag asr-models)
 MOTORE_TRASCRIZIONE = "auto"        # "auto" | "faster-whisper" | "sherpa-onnx"
-SHERPA_MODELLO = "modelli/sherpa-onnx-whisper-turbo"   # None se non c'è
+SHERPA_MODELLO = "modelli/sherpa-onnx-whisper-turbo"   # se manca viene scaricato da SHERPA_URL
+SHERPA_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-turbo.tar.bz2"
 INQUADRATURA = "auto"              # "auto" | "ritaglio" (crop sul volto) | "sfocato" (sfondo sfocato)
 
 # Cartello finale (lasciare CHIUSURA_TITOLO = "" per non metterlo)
@@ -45,6 +46,12 @@ CHIUSURA_DURATA = 4.0     # secondi di cartello
 CHIUSURA_CODA = 2.0       # secondi aggiunti in fondo (ultimo fotogramma fermo) per leggerlo con calma
 # Se per un concetto non c'è né una foto tua né Pexels, crea una grafica (icona + parola chiave)
 GRAFICHE_SE_MANCA_FOTO = True
+# Dove compaiono immagini/numeri/cartello:
+#  "sopra_testa" = il video dello speaker si rimpicciolisce e scende (sfondo sfocato), la card va sopra la testa:
+#                  il viso non viene mai coperto (consigliato per i selfie/primi piani)
+#  "centro"      = card grande al centro (copre il viso se lo speaker è in primo piano)
+DISPOSIZIONE = "sopra_testa"
+CARD_SOPRA_ALTEZZA = 270  # altezza della card sopra la testa (px)
 
 # Correzioni aggiuntive per i sottotitoli: {"parola o frase minuscola": "Forma Corretta"}
 CORREZIONI_EXTRA = {}
@@ -73,7 +80,8 @@ NUM_DURATA = 2.0
 W, H = 1080, 1350
 SAFE = (54, 60, 1026, 1280)                 # x0, y0, x1, y1 (sinistra 54, sopra 60, destra 54, sotto 70)
 TITOLO_BOX = (54, 60, 1026, 190)
-CARD_W, CARD_H, CARD_CX, CARD_CY = 900, 560, 540, 510   # area y 230–790
+CARD_W, CARD_H, CARD_CX, CARD_CY = 900, 560, 540, 510   # area y 230–790 (disposizione "centro")
+CARD_SOPRA_Y = 205                                      # bordo alto della card in "sopra_testa"
 CARD_BORDO, CARD_RAGGIO = 6, 24
 SUB_ZONA = (960, 1180)
 SUB_CY = 1070
@@ -106,7 +114,7 @@ VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
 def assicura_dipendenze():
     pacchetti = [("faster_whisper", "faster-whisper"), ("pysubs2", "pysubs2"), ("PIL", "Pillow"),
                  ("requests", "requests"), ("cv2", "opencv-python-headless<5"), ("numpy", "numpy"),
-                 ("fontTools", "fonttools")]
+                 ("fontTools", "fonttools"), ("sherpa_onnx", "sherpa-onnx")]
     mancanti = [pkg for mod, pkg in pacchetti if importlib.util.find_spec(mod) is None]
     if mancanti:
         print(f"→ Installo i pacchetti Python mancanti: {', '.join(mancanti)}")
@@ -464,6 +472,20 @@ def _trascrivi_sherpa(wav, durata):
     import sherpa_onnx
     d = Path(SHERPA_MODELLO)
     d = d if d.is_absolute() else BASE / d
+    if not d.exists():
+        import requests
+        import tarfile
+        print(f"→ Scarico il modello di trascrizione ({SHERPA_URL.rsplit('/', 1)[-1]}, ~1 GB)…")
+        d.parent.mkdir(parents=True, exist_ok=True)
+        arch = d.parent / "_modello.tar.bz2"
+        with requests.get(SHERPA_URL, stream=True, timeout=60) as r:
+            r.raise_for_status()
+            with open(arch, "wb") as f:
+                for blocco in r.iter_content(1 << 20):
+                    f.write(blocco)
+        with tarfile.open(arch) as t:
+            t.extractall(d.parent, filter="data")
+        arch.unlink()
     enc = sorted(d.glob("*encoder.int8.onnx")) or sorted(d.glob("*encoder.onnx"))
     dec = sorted(d.glob("*decoder.int8.onnx")) or sorted(d.glob("*decoder.onnx"))
     tok = sorted(d.glob("*tokens.txt"))
@@ -1147,9 +1169,11 @@ def _disegna_icona(d, tipo, cx, cy, r, col, acc):
 
 
 def genera_grafica(img):
-    """Card grafica (sfondo nel colore principale, icona, parola chiave) quando manca una foto."""
+    """Card grafica (sfondo nel colore principale, icona, parola chiave) quando manca una foto.
+    Le proporzioni seguono la card della DISPOSIZIONE scelta."""
     from PIL import Image, ImageDraw
-    gw, gh = 1776, 1096
+    cw, ch, _x, _y = geometria_card()
+    gw, gh = (cw - 2 * CARD_BORDO) * 2, (ch - 2 * CARD_BORDO) * 2
     col, hl = hex_rgb(COLORE_PRINCIPALE), hex_rgb(COLORE_EVIDENZIAZIONE)
     scuro = tuple(int(c * .45) for c in col)
     g = Image.new("RGB", (gw, gh))
@@ -1157,22 +1181,27 @@ def genera_grafica(img):
     for y in range(gh):
         p = y / gh
         d.line((0, y, gw, y), fill=tuple(int(a * (1 - p) + b * p) for a, b in zip(col, scuro)))
-    for k, (x, y, rr) in enumerate(((1500, 120, 260), (1650, 980, 380), (150, 1050, 220))):
-        d.ellipse((x - rr, y - rr, x + rr, y + rr), outline=tuple(min(255, c + 40) for c in col), width=6)
-    cx, cy, r = 470, gh // 2, 330
+    chiaro = tuple(min(255, c + 40) for c in col)
+    for fx, fy, fr in ((0.85, 0.1, 0.24), (0.93, 0.9, 0.35), (0.08, 0.95, 0.2)):
+        x, y, rr = gw * fx, gh * fy, gh * fr
+        d.ellipse((x - rr, y - rr, x + rr, y + rr), outline=chiaro, width=max(3, gh // 180))
+    r = int(gh * 0.36)
+    cx, cy = int(gh * 0.12) + r, gh // 2
     d.ellipse((cx - r, cy - r, cx + r, cy + r), fill="white")
     _disegna_icona(d, ICONE.get(img["concetto"], "info"), cx, cy, int(r * .72), col, hl)
     ft = str(next((BASE / "fonts").glob(f"*{NOMI_PESO[PESO_TITOLO]}.ttf")))
     testo = re.sub(r"^(l|dell|all|nell|sull|un|d)'|^(il|lo|la|i|gli|le|un|uno|una) ", "", img["parola"],
                    flags=re.I).upper()
-    ris = adatta_testo(ft, testo, 860, 520, 190, 70, 3)
+    x0 = cx + r + int(gh * 0.12)
+    ris = adatta_testo(ft, testo, gw - x0 - int(gh * 0.1), gh * 0.55, int(gh * 0.34), int(gh * 0.1), 2)
     if ris:
         f, righe, passo, top, alt = ris
-        y0 = cy - alt / 2 - top
+        y0 = cy - alt / 2 - top - gh * 0.03
         for k, riga in enumerate(righe):
-            d.text((880, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
-        d.rounded_rectangle((880, y0 + top + alt + 40, 1100, y0 + top + alt + 62), radius=11, fill=hl)
-    dest = BASE / "immagini" / "auto" / f"grafica_{img['concetto']}.png"
+            d.text((x0, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
+        yb = y0 + top + alt + gh * 0.06
+        d.rounded_rectangle((x0, yb, x0 + gh * 0.4, yb + gh * 0.04), radius=gh * 0.02, fill=hl)
+    dest = BASE / "immagini" / "auto" / f"grafica_{img['concetto']}_{gw}x{gh}.png"
     dest.parent.mkdir(parents=True, exist_ok=True)
     g.save(dest)
     return dest
@@ -1324,6 +1353,49 @@ def analizza_inquadratura(src, iv):
     return {"modalita": "ritaglio_v", "y": r3(y), "motivo": f"video verticale, volto in {len(facce)}/{campioni} campioni"}
 
 
+def frame_base(src, iv, inq, t, w=W, h=H, pix="rgb24"):
+    """Fotogramma al tempo t già inquadrato in 4:5 (come nel video finale), ridimensionato a w×h."""
+    import numpy as np
+    fc = filtro_base(iv, inq, "[0:v]", "[b]") + f";[b]scale={w}:{h}[o]"
+    r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.3f}", "-i", str(src), "-frames:v", "1",
+                        "-filter_complex", fc, "-map", "[o]", "-f", "rawvideo", "-pix_fmt", pix, "-"],
+                       capture_output=True, cwd=BASE)
+    n = w * h * 3
+    return np.frombuffer(r.stdout[:n], dtype=np.uint8).reshape(h, w, 3) if len(r.stdout) >= n else None
+
+
+def calcola_zoom(src, iv, inq):
+    """Per DISPOSIZIONE "sopra_testa": quanto rimpicciolire e dove spostare il video perché la card stia
+    sopra la testa e il mento resti sopra i sottotitoli. Usa il volto rilevato in tutto il video."""
+    import cv2
+    _cw, ch, _cx, _cy = geometria_card()
+    cascata = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    facce = []
+    for k in range(24):
+        fr = frame_base(src, iv, inq, iv["durata"] * (k + 0.5) / 24, W // 2, H // 2, "bgr24")
+        if fr is None:
+            continue
+        det = cascata.detectMultiScale(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY), 1.1, 5, minSize=(50, 50))
+        if len(det):
+            x, y, w, h = [v * 2 for v in max(det, key=lambda d: d[2] * d[3])]
+            facce.append((x, y, w, h))
+    if not facce:
+        return {"scala": 0.68, "x": round(W * 0.16), "y": CARD_SOPRA_Y + ch + 25, "motivo": "volto non trovato"}
+    alti = sorted(y - 0.35 * h for x, y, w, h in facce)           # capelli sopra la fronte
+    bassi = sorted(y + 1.05 * h for x, y, w, h in facce)          # mento
+    testa = alti[int(len(alti) * 0.1)]                            # valori tipici, non i casi estremi
+    mento = bassi[min(len(bassi) - 1, int(len(bassi) * 0.9))]
+    cx = statistics.median(x + w / 2 for x, y, w, h in facce)
+    sotto_card = CARD_SOPRA_Y + ch + 25
+    limite_mento = SUB_ZONA[0] - 15
+    s = min(1.0, (H - sotto_card) / (H - testa), (limite_mento - sotto_card) / max(1, mento - testa))
+    s = clamp(s, 0.5, 1.0)
+    y0 = sotto_card - s * testa
+    x0 = clamp(W / 2 - s * cx, 0, W - s * W)
+    return {"scala": r3(s), "x": round(x0), "y": round(y0),
+            "motivo": f"testa da y {testa:.0f} a {mento:.0f} (cx {cx:.0f}) in {len(facce)}/24 campioni"}
+
+
 def filtro_base(iv, inq, ingresso, uscita):
     m = inq["modalita"]
     if m == "pieno":
@@ -1367,9 +1439,11 @@ def crea_piano(src, iv, trascr, fonts):
     numeri = trova_numeri(parole, immagini, limite)
     print("→ Analizzo l'inquadratura (rilevamento volto)")
     inq = analizza_inquadratura(src, iv)
+    zoom = calcola_zoom(src, iv, inq) if DISPOSIZIONE == "sopra_testa" else None
     piano = {
         "sorgente": str(Path(src).relative_to(BASE)) if Path(src).is_relative_to(BASE) else str(src),
         "durata": r3(iv["durata"]), "sorgente_wxh": [iv["w"], iv["h"]], "inquadratura": inq,
+        "disposizione": DISPOSIZIONE, "zoom": zoom,
         "sottotitoli_px": SUB_FONT_PX, "sottotitoli_max_caratteri": SUB_MAX_CARATTERI,
         "immagini": [{"id": k + 1, **i} for k, i in enumerate(immagini)],
         "numeri": numeri,
@@ -1392,6 +1466,10 @@ def mostra_piano(piano):
     inq = piano["inquadratura"]
     righe.append(f"## Piano di montaggio — {piano['sorgente']} ({fmt_t(piano['durata'])})\n")
     righe.append(f"**Inquadratura:** {inq['modalita']} — {inq['motivo']}\n")
+    if piano.get("zoom"):
+        z = piano["zoom"]
+        righe.append(f"**Immagini sopra la testa:** quando compare una card il video scende al {z['scala']:.0%} "
+                     f"(viso sempre libero) — {z['motivo']}\n")
     righe.append(f"**Titolo fisso:** {TITOLO.upper()}  \n**Ticker:** {TICKER}\n")
     if CHIUSURA_TITOLO:
         righe.append(f"**Cartello finale:** da {fmt_t(inizio_chiusura(piano))} a {fmt_t(durata_uscita(piano))} — "
@@ -1530,6 +1608,13 @@ def verifica_ass(ass_rel, durata):
 # =====================================================================
 #  GRAFICA (titolo, card immagini, numeri, ticker) → flusso RGBA per ffmpeg
 # =====================================================================
+def geometria_card():
+    """(larghezza, altezza, centro x, centro y) della card secondo la DISPOSIZIONE."""
+    if DISPOSIZIONE == "sopra_testa":
+        return CARD_W, CARD_SOPRA_ALTEZZA, CARD_CX, CARD_SOPRA_Y + CARD_SOPRA_ALTEZZA // 2
+    return CARD_W, CARD_H, CARD_CX, CARD_CY
+
+
 def maschera_arrotondata(w, h, r, ss=4):
     from PIL import Image, ImageDraw
     m = Image.new("L", (w * ss, h * ss), 0)
@@ -1648,13 +1733,14 @@ class Grafica:
 
         # --- card ---
         b = CARD_BORDO
-        self.iw, self.ih = CARD_W - 2 * b, CARD_H - 2 * b
-        self.mask_card = maschera_arrotondata(CARD_W, CARD_H, CARD_RAGGIO)
+        CW, CH, self.ccx, self.ccy = geometria_card()
+        self.iw, self.ih = CW - 2 * b, CH - 2 * b
+        self.mask_card = maschera_arrotondata(CW, CH, CARD_RAGGIO)
         self.mask_inner = maschera_arrotondata(self.iw, self.ih, CARD_RAGGIO - b)
-        self.card_bianca = Image.new("RGBA", (CARD_W, CARD_H), (255, 255, 255, 0))
+        self.card_bianca = Image.new("RGBA", (CW, CH), (255, 255, 255, 0))
         self.card_bianca.putalpha(self.mask_card)
         self.P = 40
-        ombra = Image.new("L", (CARD_W + 2 * self.P, CARD_H + 2 * self.P), 0)
+        ombra = Image.new("L", (CW + 2 * self.P, CH + 2 * self.P), 0)
         ombra.paste(self.mask_card.point(lambda v: int(v * 0.55)), (self.P, self.P + 10))
         ombra = ombra.filter(ImageFilter.GaussianBlur(13))
         self.ombra = Image.new("RGBA", ombra.size, (0, 0, 0, 0))
@@ -1676,17 +1762,17 @@ class Grafica:
             c.paste(Image.new("RGBA", (self.iw, self.ih), (*self.col, 255)), (b, b), self.mask_inner)
             d = ImageDraw.Draw(c)
             sotto = n["unita"]
-            ris = adatta_testo(ft, n["valore"], self.iw - 80, (self.ih - 90) * (0.66 if sotto else 1), 230, 60, 1)
+            ris = adatta_testo(ft, n["valore"], self.iw - 80, (self.ih - 60) * (0.62 if sotto else 1), 230, 30, 1)
             f, righe, _p, top, alt = ris
             alt2, f2 = 0, None
             if sotto:
-                r2 = adatta_testo(ft, sotto, self.iw - 80, 110, 96, 30, 1)
+                r2 = adatta_testo(ft, sotto, self.iw - 80, (self.ih - 60) * 0.25, 96, 20, 1)
                 f2, _r, _p2, top2, alt2 = r2
-            spazio = 34 if sotto else 0
+            spazio = self.ih * 0.07 if sotto else 0
             y = b + (self.ih - alt - spazio - alt2) / 2 - top
-            d.text((CARD_W / 2, y), righe[0], font=f, fill=(*self.hl, 255), anchor="ms")
+            d.text((CW / 2, y), righe[0], font=f, fill=(*self.hl, 255), anchor="ms")
             if sotto:
-                d.text((CARD_W / 2, y + top + alt + spazio - top2), sotto, font=f2, fill="white", anchor="ms")
+                d.text((CW / 2, y + top + alt + spazio - top2), sotto, font=f2, fill="white", anchor="ms")
             card.alpha_composite(c, (self.P, self.P))
             self.numeri.append((n, card))
 
@@ -1697,17 +1783,19 @@ class Grafica:
             c = self.card_bianca.copy()
             c.paste(Image.new("RGBA", (self.iw, self.ih), (*self.col, 255)), (b, b), self.mask_inner)
             d = ImageDraw.Draw(c)
-            f1, r1, p1, t1, a1 = adatta_testo(ft, CHIUSURA_TITOLO.upper(), self.iw - 90, 250, 92, 40, 2)
-            f2, r2, p2, t2, a2 = adatta_testo(ft, CHIUSURA_TESTO.upper(), self.iw - 90, 170, 70, 30, 2)
-            spazio = 56
+            f1, r1, p1, t1, a1 = adatta_testo(ft, CHIUSURA_TITOLO.upper(), self.iw - 70, self.ih * 0.50, 92, 24, 2)
+            f2, r2, p2, t2, a2 = adatta_testo(ft, CHIUSURA_TESTO.upper(), self.iw - 70, self.ih * 0.28, 70, 20, 2)
+            lineetta = self.ih >= 400                   # nella card bassa (sopra la testa) non c'è spazio
+            spazio = self.ih * (0.11 if lineetta else 0.09)
             y = b + (self.ih - a1 - spazio - a2) / 2 - t1
             for k, riga in enumerate(r1):
-                d.text((CARD_W / 2, y + k * p1), riga, font=f1, fill="white", anchor="ms")
-            ybar = y + t1 + a1 + spazio / 2
-            d.rounded_rectangle((CARD_W / 2 - 90, ybar - 5, CARD_W / 2 + 90, ybar + 5), radius=5, fill=(*self.hl, 255))
+                d.text((CW / 2, y + k * p1), riga, font=f1, fill="white", anchor="ms")
+            if lineetta:
+                ybar = y + t1 + a1 + spazio / 2
+                d.rounded_rectangle((CW / 2 - 90, ybar - 4, CW / 2 + 90, ybar + 4), radius=4, fill=(*self.hl, 255))
             y2 = y + t1 + a1 + spazio - t2
             for k, riga in enumerate(r2):
-                d.text((CARD_W / 2, y2 + k * p2), riga, font=f2, fill=(*self.hl, 255), anchor="ms")
+                d.text((CW / 2, y2 + k * p2), riga, font=f2, fill=(*self.hl, 255), anchor="ms")
             card.alpha_composite(c, (self.P, self.P))
             self.chiusura = (inizio_chiusura(piano), card)
 
@@ -1740,7 +1828,7 @@ class Grafica:
         return con_alpha(tela, alpha)
 
     def _incolla_centro(self, frame, tela):
-        frame.alpha_composite(tela, (round(CARD_CX - tela.width / 2), round(CARD_CY - tela.height / 2)))
+        frame.alpha_composite(tela, (round(self.ccx - tela.width / 2), round(self.ccy - tela.height / 2)))
 
     def frame(self, t, controlla=False):
         if t >= 0.4:
@@ -1826,7 +1914,35 @@ def filtro_audio(m):
             f"offset={m['target_offset']}:linear=true:print_format=summary")
 
 
+def intervalli_card(piano):
+    """Intervalli in cui c'è una card (immagine, numero, cartello), uniti se vicini."""
+    ev = [(i["inizio"], i["inizio"] + i["durata"]) for i in piano["immagini"] if i["file"]]
+    ev += [(n["inizio"], n["inizio"] + n["durata"]) for n in piano["numeri"]]
+    if CHIUSURA_TITOLO:
+        ev.append((inizio_chiusura(piano), durata_uscita(piano) + 1))
+    uniti = []
+    for a_, b_ in sorted(ev):
+        if uniti and a_ - uniti[-1][1] < 0.9:
+            uniti[-1] = (uniti[-1][0], max(uniti[-1][1], b_))
+        else:
+            uniti.append((a_, b_))
+    return uniti
+
+
+def quota_zoom(t, intervalli, entrata=0.45, anticipo=0.3):
+    """0 = video a pieno schermo, 1 = video rimpicciolito (card visibile)."""
+    q = 0.0
+    for a_, b_ in intervalli:
+        if a_ - anticipo <= t <= b_ + 0.15:
+            su = ease_out_cubic((t - (a_ - anticipo)) / entrata)
+            giu = ease_out_cubic((b_ + 0.15 - t) / entrata)
+            q = max(q, min(su, giu))
+    return q
+
+
 def renderizza(piano, fonts, ass_rel, dest, anteprima):
+    """Decodifica (ffmpeg) → composizione in Python (zoom del video + grafica) → codifica (ffmpeg)."""
+    from PIL import Image
     src = piano["sorgente"]
     iv = info_video(BASE / src)
     durata = min(durata_uscita(piano), DURATA_ANTEPRIMA) if anteprima else durata_uscita(piano)
@@ -1834,42 +1950,68 @@ def renderizza(piano, fonts, ass_rel, dest, anteprima):
     n_frame = int(round(durata * FPS))
     loud = misura_loudness(src)
     graf = Grafica(piano, fonts)
-    # 540x675 ha l'altezza dispari (non ammessa da yuv420p): aggiungo 1 px nero sotto → 540x676
-    finale = f",scale={W // 2}:{H // 2}:flags=lanczos,pad={W // 2}:{H // 2 + 1}:0:0" if anteprima else ""
+    zoom = piano.get("zoom") if DISPOSIZIONE == "sopra_testa" else None
+    intervalli = intervalli_card(piano) if zoom else []
     tpad = f",tpad=stop_mode=clone:stop_duration={coda + 0.5:.2f}" if coda > 0 else ""
     apad = ",apad" if coda > 0 else ""
-    fc = (f"[0:v]setpts=PTS-STARTPTS,fps={FPS}{tpad}[v0];" + filtro_base(iv, piano["inquadratura"], "[v0]", "[b]") + ";"
-          f"[1:v]setpts=PTS-STARTPTS[o];[b][o]overlay=0:0:format=gbrp:eof_action=pass,"
-          f"ass={ass_rel}:fontsdir=fonts{finale},format=yuv420p[v];"
-          f"[0:a:0]asetpts=PTS-STARTPTS,{filtro_audio(loud)},aresample=48000{apad}[a]")
+    # 1) decodifica: fotogramma nitido + sua versione sfocata (sfondo quando il video si rimpicciolisce)
+    fc_in = (f"[0:v]setpts=PTS-STARTPTS,fps={FPS}{tpad}[v0];" + filtro_base(iv, piano["inquadratura"], "[v0]", "[b]")
+             + f";[b]split[n][t];[t]scale={W // 4}:{H // 4},boxblur=10:2,scale={W}:{H},"
+               f"eq=brightness=-0.10:saturation=0.8[s];[n][s]vstack[o]")
+    dec = subprocess.Popen(["ffmpeg", "-v", "error", "-i", str(src), "-filter_complex", fc_in, "-map", "[o]",
+                            "-t", f"{durata:.3f}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=BASE)
+    # 2) codifica: sottotitoli ASS + audio normalizzato
+    # 540x675 ha l'altezza dispari (non ammessa da yuv420p): aggiungo 1 px nero sotto → 540x676
+    finale = f",scale={W // 2}:{H // 2}:flags=lanczos,pad={W // 2}:{H // 2 + 1}:0:0" if anteprima else ""
+    fc_out = (f"[0:v]ass={ass_rel}:fontsdir=fonts{finale},format=yuv420p[v];"
+              f"[1:a:0]asetpts=PTS-STARTPTS,{filtro_audio(loud)},aresample=48000{apad}[a]")
     if anteprima:
         venc = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-profile:v", "high"]
     else:
         venc = ["-c:v", "libx264", "-preset", PRESET_FINALE, "-profile:v", "high", "-level", "4.1",
                 "-b:v", BITRATE_VIDEO, "-maxrate", MAXRATE, "-bufsize", BUFSIZE, "-g", str(FPS * 2)]
-    cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "warning", "-i", str(src),
-           "-f", "rawvideo", "-pix_fmt", "rgba", "-video_size", f"{W}x{H}", "-framerate", str(FPS),
-           "-thread_queue_size", "64", "-i", "-",
-           "-filter_complex", fc, "-map", "[v]", "-map", "[a]", "-t", f"{durata:.3f}",
+    cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "warning",
+           "-f", "rawvideo", "-pix_fmt", "rgb24", "-video_size", f"{W}x{H}", "-framerate", str(FPS),
+           "-thread_queue_size", "64", "-i", "-", "-i", str(src),
+           "-filter_complex", fc_out, "-map", "[v]", "-map", "[a]", "-t", f"{durata:.3f}",
            *venc, "-pix_fmt", "yuv420p", "-r", str(FPS), "-fps_mode", "cfr",
            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
            "-movflags", "+faststart", str(dest.relative_to(BASE))]
     log = open(BASE / "output" / ("_ffmpeg_anteprima.log" if anteprima else "_ffmpeg_finale.log"), "w")
     print(f"→ Render {'anteprima 540x676' if anteprima else 'finale 1080x1350'}: {n_frame} fotogrammi")
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=log, cwd=BASE)
-    t0, ultimo = time.time(), -1
+    enc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=log, cwd=BASE)
+    t0, ultimo, dim = time.time(), -1, W * H * 3
+    ultimo_buf = None
     try:
         for k in range(n_frame):
-            p.stdin.write(graf.frame(k / FPS, controlla=(k % 5 == 0)).tobytes())
+            t = k / FPS
+            buf = dec.stdout.read(dim * 2)
+            if len(buf) < dim * 2:                    # fine anticipata della sorgente: ripeto l'ultimo
+                buf = ultimo_buf
+            ultimo_buf = buf
+            nitido = Image.frombytes("RGB", (W, H), buf[:dim])
+            q = quota_zoom(t, intervalli) if zoom else 0.0
+            if q > 0.001:
+                quadro = Image.frombytes("RGB", (W, H), buf[dim:])
+                sc = 1 - (1 - zoom["scala"]) * q
+                piccolo = nitido.resize((round(W * sc), round(H * sc)), Image.BILINEAR)
+                quadro.paste(piccolo, (round(zoom["x"] * q), round(zoom["y"] * q)))
+            else:
+                quadro = nitido
+            gr = graf.frame(t, controlla=(k % 5 == 0))
+            quadro.paste(gr, (0, 0), gr)
+            enc.stdin.write(quadro.tobytes())
             perc = int(100 * (k + 1) / n_frame)
             if perc // 10 != ultimo:
                 ultimo = perc // 10
                 v = (k + 1) / max(0.01, time.time() - t0)
                 print(f"   {perc:3d}%  ({v:.1f} fps)", flush=True)
-        p.stdin.close()
+        enc.stdin.close()
     except BrokenPipeError:
         pass
-    rc = p.wait()
+    dec.kill()
+    rc = enc.wait()
     log.close()
     if rc != 0:
         sys.exit(f"ffmpeg ha dato errore, vedi output/{Path(log.name).name}:\n"
