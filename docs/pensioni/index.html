@@ -122,11 +122,11 @@
 <script>
   // =====================================================================
   //  DOVE ARRIVANO LE RICHIESTE — da impostare prima di pubblicare
-  //  INDIRIZZO_INVIO: l'URL che riceve i dati del modulo (POST in JSON).
-  //  Esempio con FormSubmit (arrivano per email, senza account):
-  //    "https://formsubmit.co/ajax/solimandoemilio@libero.it"
+  //  Web3Forms inoltra ogni richiesta a solimandoemilio@libero.it.
+  //  La chiave è pubblica: indica solo a quale casella spedire.
   // =====================================================================
-  const INDIRIZZO_INVIO = "https://formsubmit.co/ajax/solimandoemilio@libero.it";
+  const INDIRIZZO_INVIO = "https://api.web3forms.com/submit";
+  const WEB3FORMS_ACCESS_KEY = "5a25316e-256d-4d78-afaf-42a37cbda033";
 
   const modulo = document.getElementById("modulo");
   const esitoErrore = modulo.querySelector(".esito-errore");
@@ -171,6 +171,9 @@
     if (modulo.elements._honey.value) return;          // compilato da un programma automatico
 
     const dati = {
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: "Nuova richiesta verifica pensione ex INPDAP",
+      from_name: "Landing verifica pensione",
       nome: modulo.elements.nome.value.trim(),
       cognome: modulo.elements.cognome.value.trim(),
       email: modulo.elements.email.value.trim(),
@@ -179,9 +182,6 @@
       consenso_aggiornamenti: modulo.elements.consenso_aggiornamenti.checked ? "Sì" : "No",
       data_richiesta: new Date().toLocaleString("it-IT"),
       provenienza: new URLSearchParams(location.search).get("utm_source") || document.referrer || "diretto",
-      _subject: "Nuova richiesta verifica pensione ex INPDAP",
-      _template: "table",
-      _captcha: "false",
     };
 
     if (!INDIRIZZO_INVIO) {
@@ -200,9 +200,8 @@
         body: JSON.stringify(dati),
       });
       if (!risposta.ok) throw new Error("HTTP " + risposta.status);
-      // FormSubmit risponde 200 anche quando non ha inoltrato (es. indirizzo non ancora attivato)
       const esito = await risposta.json().catch(() => ({}));
-      if (esito.success === false || esito.success === "false") throw new Error(esito.message || "non inviato");
+      if (esito.success !== true) throw new Error(esito.message || "non inviato");
       modulo.style.display = "none";
       const grazie = document.getElementById("grazie");
       grazie.style.display = "block";
