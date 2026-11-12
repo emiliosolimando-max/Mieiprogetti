@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifica pensione ex INPDAP – Difesa e Sicurezza</title>
+  <meta name="description" content="Sei in pensione dal 2007 o dopo dal comparto Difesa e Sicurezza? Richiedi la verifica della tua pensione ex INPDAP.">
+  <meta property="og:title" content="Novità pensioni – Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza">
+  <meta property="og:description" content="Lascia i tuoi dati: ti ricontattiamo per spiegarti come verificare la tua pensione.">
+  <meta property="og:image" content="copertina.jpg">
+  <meta name="theme-color" content="#0B3D91">
+  <link rel="preload" href="fonts/montserrat-extrabold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="stile.css">
+</head>
+<body>
+
+<header class="testata">
+  <div class="contenitore">
+    <p class="studio">AVV. EMILIO SOLIMANDO</p>
+    <span class="occhiello">NOVITÀ PENSIONI</span>
+    <h1>Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza</h1>
+    <p class="sottotitolo">Sei in pensione <strong>dal 2007 o dopo</strong>? Nel calcolo di alcune pensioni abbiamo
+      riscontrato anomalie che potrebbero dare diritto a un <strong>importo mensile più alto</strong> e agli
+      <strong>arretrati fino a 5 anni</strong>.</p>
+  </div>
+</header>
+
+<main class="contenitore">
+
+  <section class="scheda" aria-labelledby="titolo-modulo">
+    <form id="modulo" novalidate>
+      <h2 id="titolo-modulo">Richiedi la verifica</h2>
+      <p class="nota">Lascia i tuoi dati: ti ricontattiamo per spiegarti come verificare la tua pensione.</p>
+
+      <div class="riga">
+        <div class="campo">
+          <label for="nome">Nome</label>
+          <input id="nome" name="nome" type="text" autocomplete="given-name" required>
+          <div class="msg-errore">Inserisci il nome</div>
+        </div>
+        <div class="campo">
+          <label for="cognome">Cognome</label>
+          <input id="cognome" name="cognome" type="text" autocomplete="family-name" required>
+          <div class="msg-errore">Inserisci il cognome</div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
+        <div class="msg-errore">Inserisci un indirizzo email valido</div>
+      </div>
+
+      <div class="campo">
+        <label for="telefono">Telefono</label>
+        <input id="telefono" name="telefono" type="tel" autocomplete="tel" inputmode="tel" required
+               placeholder="es. 333 1234567">
+        <div class="msg-errore">Inserisci un numero di telefono valido</div>
+      </div>
+
+      <!-- campo trappola contro lo spam automatico: le persone non lo vedono -->
+      <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true"
+             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+
+      <label class="consenso" id="c-privacy">
+        <input type="checkbox" name="consenso_privacy" required>
+        <span class="testo-consenso">Ho letto l'<a href="privacy.html" target="_blank" rel="noopener">informativa
+          privacy</a> e acconsento al trattamento dei miei dati per essere ricontattato in merito alla mia
+          richiesta. <b>(obbligatorio)</b>
+          <span class="msg-errore">Per inviare la richiesta serve questo consenso</span></span>
+      </label>
+
+      <label class="consenso">
+        <input type="checkbox" name="consenso_aggiornamenti">
+        <span class="testo-consenso">Acconsento a ricevere aggiornamenti e comunicazioni informative dello Studio
+          sulle novità in materia pensionistica. (facoltativo)</span>
+      </label>
+
+      <button class="bottone" type="submit">Richiedi la verifica →</button>
+      <p class="sicuro">I tuoi dati sono usati solo per ricontattarti e non vengono ceduti a terzi.</p>
+      <div class="esito-errore" role="alert"></div>
+    </form>
+
+    <div class="grazie" id="grazie" role="status" tabindex="-1">
+      <div class="spunta">✓</div>
+      <h2>Grazie, richiesta ricevuta!</h2>
+      <p>Ti contatteremo al più presto per spiegarti come procedere con la verifica della tua pensione.</p>
+      <p>Se preferisci, puoi scriverci subito a <a href="mailto:solimandoemilio@libero.it">solimandoemilio@libero.it</a></p>
+    </div>
+  </section>
+
+  <section class="sezione">
+    <h3>Chi può essere interessato</h3>
+    <p>Chi è andato in pensione <b>dal 2007 in poi</b> ed è appartenuto al comparto Difesa e Sicurezza:</p>
+    <ul class="corpi">
+      <li>Esercito</li><li>Marina Militare</li><li>Aeronautica Militare</li><li>Carabinieri</li>
+      <li>Polizia di Stato</li><li>Guardia di Finanza</li><li>Polizia Penitenziaria</li>
+    </ul>
+  </section>
+
+  <section class="sezione">
+    <h3>Come funziona</h3>
+    <ol class="passi">
+      <li><span>Lasci nome, email e telefono nel modulo qui sopra.</span></li>
+      <li><span>Ti ricontattiamo per capire se la tua posizione rientra nella verifica.</span></li>
+      <li><span>Esaminiamo i documenti della tua pensione e ti comunichiamo l'esito.</span></li>
+    </ol>
+    <p class="avviso">L'eventuale diritto a un importo più alto o agli arretrati dipende dalla singola posizione e
+      va verificato caso per caso.</p>
+  </section>
+
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p><b>Avv. Emilio Solimando</b> – da 30 anni ci occupiamo di materia pensionistica</p>
+    <p><span class="da-completare">[Indirizzo dello studio]</span> · <span class="da-completare">[P. IVA]</span></p>
+    <p>Email: <a href="mailto:solimandoemilio@libero.it">solimandoemilio@libero.it</a> ·
+      <a href="privacy.html">Informativa privacy</a></p>
+  </div>
+</footer>
+
+<script>
+  // =====================================================================
+  //  DOVE ARRIVANO LE RICHIESTE — da impostare prima di pubblicare
+  //  INDIRIZZO_INVIO: l'URL che riceve i dati del modulo (POST in JSON).
+  //  Esempio con FormSubmit (arrivano per email, senza account):
+  //    "https://formsubmit.co/ajax/solimandoemilio@libero.it"
+  // =====================================================================
+  const INDIRIZZO_INVIO = "";
+
+  const modulo = document.getElementById("modulo");
+  const esitoErrore = modulo.querySelector(".esito-errore");
+  const bottone = modulo.querySelector(".bottone");
+
+  const controlli = {
+    nome: v => v.trim().length >= 2,
+    cognome: v => v.trim().length >= 2,
+    email: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()),
+    telefono: v => v.replace(/[\s.\-\/()]/g, "").replace(/^(\+|00)39/, "").match(/^\+?\d{8,13}$/) !== null,
+  };
+
+  function verificaCampo(nome) {
+    const input = modulo.elements[nome];
+    const ok = controlli[nome](input.value);
+    input.closest(".campo").classList.toggle("invalido", !ok);
+    input.setAttribute("aria-invalid", String(!ok));
+    return ok;
+  }
+
+  for (const nome of Object.keys(controlli)) {
+    modulo.elements[nome].addEventListener("blur", () => {
+      if (modulo.elements[nome].value) verificaCampo(nome);
+    });
+    modulo.elements[nome].addEventListener("input", () => {
+      if (modulo.elements[nome].closest(".campo").classList.contains("invalido")) verificaCampo(nome);
+    });
+  }
+
+  modulo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    esitoErrore.style.display = "none";
+    let tuttoOk = true;
+    let primo = null;
+    for (const nome of Object.keys(controlli)) {
+      if (!verificaCampo(nome)) { tuttoOk = false; primo = primo || modulo.elements[nome]; }
+    }
+    const privacy = modulo.elements.consenso_privacy;
+    document.getElementById("c-privacy").classList.toggle("invalido", !privacy.checked);
+    if (!privacy.checked) { tuttoOk = false; primo = primo || privacy; }
+    if (!tuttoOk) { primo.focus(); return; }
+    if (modulo.elements._honey.value) return;          // compilato da un programma automatico
+
+    const dati = {
+      nome: modulo.elements.nome.value.trim(),
+      cognome: modulo.elements.cognome.value.trim(),
+      email: modulo.elements.email.value.trim(),
+      telefono: modulo.elements.telefono.value.trim(),
+      consenso_privacy: "Sì",
+      consenso_aggiornamenti: modulo.elements.consenso_aggiornamenti.checked ? "Sì" : "No",
+      data_richiesta: new Date().toLocaleString("it-IT"),
+      provenienza: new URLSearchParams(location.search).get("utm_source") || document.referrer || "diretto",
+      _subject: "Nuova richiesta verifica pensione ex INPDAP",
+      _template: "table",
+      _captcha: "false",
+    };
+
+    if (!INDIRIZZO_INVIO) {
+      esitoErrore.textContent = "Il modulo non è ancora collegato: la richiesta non è stata inviata. " +
+        "Nel frattempo puoi scrivere a solimandoemilio@libero.it";
+      esitoErrore.style.display = "block";
+      return;
+    }
+
+    bottone.disabled = true;
+    bottone.textContent = "Invio in corso…";
+    try {
+      const risposta = await fetch(INDIRIZZO_INVIO, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(dati),
+      });
+      if (!risposta.ok) throw new Error("HTTP " + risposta.status);
+      modulo.style.display = "none";
+      const grazie = document.getElementById("grazie");
+      grazie.style.display = "block";
+      grazie.focus();
+      // per misurare i contatti dalle inserzioni (Meta Pixel), se installato
+      if (typeof fbq === "function") fbq("track", "Lead");
+    } catch (err) {
+      esitoErrore.textContent = "Non siamo riusciti a inviare la richiesta. Riprova tra poco oppure scrivi a " +
+        "solimandoemilio@libero.it";
+      esitoErrore.style.display = "block";
+      bottone.disabled = false;
+      bottone.textContent = "Richiedi la verifica →";
+    }
+  });
+</script>
+</body>
+</html>
