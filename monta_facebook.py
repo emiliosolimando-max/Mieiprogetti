@@ -464,6 +464,10 @@ def _allinea(parole, corse):
     return out
 
 
+def _norm_frase(t):
+    return re.sub(r"[^a-z0-9]", "", senza_accenti(t.lower()))
+
+
 def _trascrivi_sherpa(wav, durata):
     """Whisper via sherpa-onnx (onnxruntime). Non dà i tempi delle parole: trascrivo tratti brevi tagliati
     nelle pause e distribuisco le parole sul parlato del tratto in proporzione alle sillabe."""
@@ -518,6 +522,10 @@ def _trascrivi_sherpa(wav, durata):
                 if len(sotto) > 1:
                     out += sotto
                     continue
+            if f1 - f0 < 30 or not tx.strip():
+                continue                          # frammenti brevissimi: di solito ripetizioni o "allucinazioni"
+            if out and _norm_frase(tx) and _norm_frase(out[-1][2]).endswith(_norm_frase(tx)):
+                continue                          # ripete la coda della frase precedente
             out.append((f0, f1, tx))
         return out
 
