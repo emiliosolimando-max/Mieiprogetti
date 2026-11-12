@@ -22,9 +22,10 @@ immagini (inizio, durata, file), numeri in evidenza, testo dei sottotitoli ("rig
 #  PARAMETRI — per un nuovo video di solito basta cambiare questi
 # =====================================================================
 FILE_SORGENTE = None   # es. "input/pensioni.mp4"; None = primo video trovato in ./input/
-TITOLO = "COME OTTENERE IL RICALCOLO DELLA PENSIONE"
-TICKER = ("Come ottenere il ricalcolo della pensione • Chiedi anche tu il ricalcolo • "
-          "Segui la pagina per restare aggiornato • Condividi con chi può interessare •")
+# Scritta fissa sopra la testa. Con " | " la prima parte diventa un occhiello giallo più grande.
+TITOLO = "NOVITÀ PENSIONI | Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza"
+TICKER = ("Novità pensioni • Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza • "
+          "Scrivi a solimandoemilio@libero.it o nei commenti • Condividi con chi può interessare •")
 COLORE_PRINCIPALE = "#0B3D91"      # fascia titolo / ticker
 COLORE_EVIDENZIAZIONE = "#FFD400"  # parola pronunciata, numeri in evidenza
 FONT_FAMIGLIA = "Montserrat"       # scaricato da Google Fonts se manca
@@ -40,8 +41,8 @@ SHERPA_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models
 INQUADRATURA = "auto"              # "auto" | "ritaglio" (crop sul volto) | "sfocato" (sfondo sfocato)
 
 # Cartello finale (lasciare CHIUSURA_TITOLO = "" per non metterlo)
-CHIUSURA_TITOLO = "RICALCOLO DELLE PENSIONI"
-CHIUSURA_TESTO = "Chiedi anche tu il ricalcolo"
+CHIUSURA_TITOLO = "CONTROLLA LA TUA PENSIONE"
+CHIUSURA_TESTO = "Scrivi a solimandoemilio@libero.it o nei commenti"
 CHIUSURA_DURATA = 4.0     # secondi di cartello
 CHIUSURA_CODA = 2.0       # secondi aggiunti in fondo (ultimo fotogramma fermo) per leggerlo con calma
 # Se per un concetto non c'è né una foto tua né Pexels, crea una grafica (icona + parola chiave)
@@ -50,8 +51,15 @@ GRAFICHE_SE_MANCA_FOTO = True
 #  "sopra_testa" = il video dello speaker si rimpicciolisce e scende (sfondo sfocato), la card va sopra la testa:
 #                  il viso non viene mai coperto (consigliato per i selfie/primi piani)
 #  "centro"      = card grande al centro (copre il viso se lo speaker è in primo piano)
-DISPOSIZIONE = "sopra_testa"
+#  "accanto"     = lo speaker si sposta di lato (e si rimpicciolisce un po'), la card va nello spazio accanto
+DISPOSIZIONE = "accanto"
 CARD_SOPRA_ALTEZZA = 270  # altezza della card sopra la testa (px)
+CARD_ACCANTO = (420, 520)  # larghezza, altezza massima della card accanto alla figura
+
+# Sottotitoli: "parole" = 1–3 parole alla volta, grandi e bianche; "frasi" = 2 righe con parola in giallo
+SUB_STILE = "parole"
+SUB_PAROLE_MAX = 3
+SUB_PAROLE_PX = 84
 
 # Correzioni aggiuntive per i sottotitoli: {"parola o frase minuscola": "Forma Corretta"}
 CORREZIONI_EXTRA = {}
@@ -68,7 +76,7 @@ SUB_FONT_PX = 56          # 52–58 px (altezza "em", come in un editor grafico)
 SUB_FONT_PX_MIN = 52
 SUB_MAX_CARATTERI = 32
 TICKER_VELOCITA = 110     # px/s
-IMG_INTERVALLO_MIN = 5.0  # secondi minimi tra l'inizio di due immagini (spec: 4–6)
+IMG_INTERVALLO_MIN = 4.0  # secondi minimi tra l'inizio di due immagini (spec: 4–6)
 IMG_ANTICIPO = 0.15
 IMG_INIZIO_MIN = 1.5      # niente immagini mentre entra il titolo
 IMG_DURATA_MIN, IMG_DURATA_MAX = 2.5, 4.0
@@ -82,6 +90,7 @@ SAFE = (54, 60, 1026, 1280)                 # x0, y0, x1, y1 (sinistra 54, sopra
 TITOLO_BOX = (54, 60, 1026, 190)
 CARD_W, CARD_H, CARD_CX, CARD_CY = 900, 560, 540, 510   # area y 230–790 (disposizione "centro")
 CARD_SOPRA_Y = 205                                      # bordo alto della card in "sopra_testa"
+CARD_RIENTRO = 24      # distanza della card "accanto" dal margine: l'ombra (anche nel "pop") resta nell'area utile
 CARD_BORDO, CARD_RAGGIO = 6, 24
 SUB_ZONA = (960, 1180)
 SUB_CY = 1070
@@ -906,25 +915,71 @@ def crea_blocchi(parole, mis, durata_video):
     return blocchi
 
 
+def crea_blocchi_parole(parole, mis, durata_video):
+    """Sottotitoli brevi: 1–3 parole alla volta, una riga, mai spezzando dopo un articolo/preposizione."""
+    gruppi, cur = [], []
+    for p in parole:
+        if cur:
+            prova = " ".join(q["w"] for q in cur + [p])
+            troppo_largo = mis.w(prova) > larghezza_max_sub() and not (len(cur) == 1 and _debole(cur[0]["w"]))
+            if (len(cur) >= SUB_PAROLE_MAX or troppo_largo
+                    or p["start"] - cur[-1]["end"] > 0.45 or p["end"] - cur[0]["start"] > 1.8):
+                riporto = cur.pop() if len(cur) > 1 and _debole(cur[-1]["w"]) else None
+                gruppi.append(cur)
+                cur = [riporto] if riporto else []
+        cur.append(p)
+        if re.search(r"[.,;:!?…][\"»”)]*$", p["w"]):
+            gruppi.append(cur)
+            cur = []
+    if cur:
+        gruppi.append(cur)
+    blocchi = []
+    for i, g in enumerate(gruppi):
+        prossimo = gruppi[i + 1][0]["start"] if i + 1 < len(gruppi) else durata_video
+        fine = min(prossimo, g[-1]["end"] + 0.4)
+        if prossimo - fine < 0.25:
+            fine = prossimo
+        fine = max(fine, min(prossimo, g[0]["start"] + 0.35))
+        testo = " ".join(q["w"] for q in g)
+        px = mis.px if mis.w(testo) <= larghezza_max_sub() else int(mis.px * larghezza_max_sub() / mis.w(testo))
+        blocchi.append({"inizio": r3(g[0]["start"]), "fine": r3(fine), "righe": [testo], "a_capo": len(g),
+                        "parole": list(g), "px": px})
+    return blocchi
+
+
+def crea_sottotitoli(parole, fonts, px, durata_video):
+    if SUB_STILE == "parole":
+        return crea_blocchi_parole(parole, Misuratore(fonts["titolo"]["path"], px), durata_video)
+    return crea_blocchi(parole, Misuratore(fonts["sottotitoli"]["path"], px), durata_video)
+
+
 # =====================================================================
 #  CONCETTI VISIVI
 # =====================================================================
 # (concetto, inneschi (regex su parola normalizzata; spazio = parole consecutive), query Pexels)
 CONCETTI = [
-    ("ricalcolo", ["ricalcol\\w*"], "calculator pension documents"),
+    ("ricalcolo", ["ricalcol\\w*", "conteggi", "calcol[io]"], "calculator pension documents"),
     ("contributi", ["contribut\\w*", "estratto conto", "versament\\w*"], "documents paperwork desk"),
     ("arretrati", ["arretrat\\w*", "rimbors\\w*"], "euro money banknotes"),
     ("domanda", ["domand[ae]", "richiest[ae]", "istanz[ae]", "ricors[oi]"], "filling application form"),
-    ("patronato", ["patronat[oi]", "caf", "consulent[ei]", "avvocat[oi]", "espert[oi]"], "consultant office meeting"),
+    ("patronato", ["patronat[oi]", "caf", "consulent[ei]", "espert[oi]"], "consultant office meeting"),
+    ("avvocato", ["avvocat[oi]", "legal[ei]", "studio legale"], "lawyer office"),
+    ("difesa_sicurezza", ["comparto difesa", "difesa e sicurezza", "difesa", "militar[ei]", "forze armate"],
+     "military uniform"),
+    ("forze_armate", ["esercito", "marina", "aeronautica"], "italian army navy"),
+    ("diritti", ["diritt[io]"], "justice scales"),
+    ("email", ["e-?mail", "mail", "posta elettronica"], "email inbox"),
+    ("commenti", ["comment[io]", "contattat[oi]"], "social media comments"),
     ("verifica", ["verific\\w*", "controll\\w*"], "checking documents magnifying glass"),
-    ("errori", ["error[ei]", "sbagliat\\w*", "anomali[ae]"], "mistake warning documents"),
+    ("errori", ["error[ei]", "sbagliat\\w*", "anomali[ae]", "differenz[ae]"], "mistake warning documents"),
     ("scadenza", ["scadenz[ae]", "prescrizion\\w*", "termin[ie] di legge"], "calendar deadline"),
-    ("assegno", ["assegn[oi] pensionistic\\w*", "importo", "import[io] della pension\\w*"], "pension money euro"),
+    ("assegno", ["assegn[oi] pensionistic\\w*", "importo", "import[io] della pension\\w*", "aumentat[aeio]"],
+     "pension money euro"),
     ("busta_paga", ["bust[ae] pag[ah]e?", "stipend\\w*", "salar\\w*", "cedolin\\w*"], "payslip salary money"),
     ("agenzia_entrate", ["agenzia delle entrate", "fisco", "fiscal\\w*", "tass[ae]", "impost[ae]", "irpef",
                          "dichiarazione dei redditi", "730", "cartell[ae] esattorial[ei]"], "tax documents calculator"),
-    ("inps", ["inps"], "government office counter queue"),
-    ("pensionati", ["pensionat[aeio]", "pensioni", "anzian[io]", "terza eta"], "elderly couple park bench"),
+    ("inps", ["inps", "inpdap"], "government office counter queue"),
+    ("pensionati", ["pensionat[aeio]", "pensioni", "anzian[io]", "terza eta", "quiescenza"], "elderly couple park bench"),
     ("assegno_unico", ["assegno unico", "bonus", "isee"], "family budget euro money"),
     ("carabinieri", ["carabinier[ei]"], "italian police patrol car"),
     ("polizia", ["polizia", "poliziott\\w*", "forze dell'?ordine", "questur\\w*", "arrest\\w*"],
@@ -1115,7 +1170,14 @@ ICONE = {"ricalcolo": "calcolatrice", "contributi": "documento", "arretrati": "e
          "pensionati": "persone", "inps": "ufficio", "busta_paga": "documento", "agenzia_entrate": "documento",
          "soldi": "euro", "assegno_unico": "euro", "legge": "documento", "governo": "ufficio",
          "ministero": "ufficio", "tribunale": "ufficio", "comune": "ufficio", "banca": "euro",
-         "famiglia": "persone", "giovani": "persone", "lavoro": "persone", "inflazione": "euro"}
+         "famiglia": "persone", "giovani": "persone", "lavoro": "persone", "inflazione": "euro",
+         "difesa_sicurezza": "scudo", "forze_armate": "scudo", "carabinieri": "scudo", "polizia": "scudo",
+         "email": "busta", "commenti": "fumetto", "diritti": "bilancia", "avvocato": "bilancia"}
+
+
+def _font_icona(px):
+    from PIL import ImageFont
+    return ImageFont.truetype(str(next((BASE / "fonts").glob(f"*{NOMI_PESO[PESO_TITOLO]}.ttf"))), max(8, px))
 
 
 def _disegna_icona(d, tipo, cx, cy, r, col, acc):
@@ -1170,6 +1232,32 @@ def _disegna_icona(d, tipo, cx, cy, r, col, acc):
                   width=w)
         d.rounded_rectangle((cx - r * .09, cy - r * .35, cx + r * .09, cy + r * .28), radius=r * .05, fill=acc)
         d.ellipse((cx - r * .1, cy + r * .4, cx + r * .1, cy + r * .6), fill=acc)
+    elif tipo == "scudo":
+        d.polygon([(cx, cy - r * .9), (cx + r * .75, cy - r * .6), (cx + r * .65, cy + r * .3), (cx, cy + r * .9),
+                   (cx - r * .65, cy + r * .3), (cx - r * .75, cy - r * .6)], fill=col)
+        st = [(cx + r * .42 * math.cos(math.radians(-90 + k * 36)) * (1 if k % 2 == 0 else .42),
+               cy - r * .02 + r * .42 * math.sin(math.radians(-90 + k * 36)) * (1 if k % 2 == 0 else .42))
+              for k in range(10)]
+        d.polygon(st, fill=acc)
+    elif tipo == "busta":
+        d.rounded_rectangle((cx - r * .9, cy - r * .55, cx + r * .9, cy + r * .6), radius=r * .08, outline=col, width=w)
+        d.line((cx - r * .85, cy - r * .5, cx, cy + r * .1, cx + r * .85, cy - r * .5), fill=col, width=w)
+        d.ellipse((cx + r * .4, cy + r * .2, cx + r * 1.0, cy + r * .8), fill=acc)
+        d.text((cx + r * .7, cy + r * .5), "@", fill=col, anchor="mm", font=_font_icona(int(r * .5)))
+    elif tipo == "fumetto":
+        d.rounded_rectangle((cx - r * .9, cy - r * .7, cx + r * .9, cy + r * .4), radius=r * .25, fill=col)
+        d.polygon([(cx - r * .45, cy + r * .3), (cx - r * .55, cy + r * .85), (cx - r * .05, cy + r * .35)], fill=col)
+        for k in (-1, 0, 1):
+            d.ellipse((cx + k * r * .42 - r * .11, cy - r * .26, cx + k * r * .42 + r * .11, cy - r * .04), fill=acc)
+    elif tipo == "bilancia":
+        d.line((cx, cy - r * .8, cx, cy + r * .6), fill=col, width=w * 2)
+        d.line((cx - r * .75, cy - r * .5, cx + r * .75, cy - r * .5), fill=col, width=w * 2)
+        d.rectangle((cx - r * .45, cy + r * .6, cx + r * .45, cy + r * .75), fill=col)
+        for sx in (-1, 1):
+            x = cx + sx * r * .75
+            d.line((x, cy - r * .5, x - r * .28, cy + r * .1), fill=col, width=max(3, w // 2))
+            d.line((x, cy - r * .5, x + r * .28, cy + r * .1), fill=col, width=max(3, w // 2))
+            d.chord((x - r * .32, cy - r * .1, x + r * .32, cy + r * .3), 0, 180, fill=acc)
     else:  # info
         d.ellipse((cx - r * .85, cy - r * .85, cx + r * .85, cy + r * .85), outline=col, width=w)
         d.ellipse((cx - r * .1, cy - r * .55, cx + r * .1, cy - r * .35), fill=acc)
@@ -1193,22 +1281,37 @@ def genera_grafica(img):
     for fx, fy, fr in ((0.85, 0.1, 0.24), (0.93, 0.9, 0.35), (0.08, 0.95, 0.2)):
         x, y, rr = gw * fx, gh * fy, gh * fr
         d.ellipse((x - rr, y - rr, x + rr, y + rr), outline=chiaro, width=max(3, gh // 180))
-    r = int(gh * 0.36)
-    cx, cy = int(gh * 0.12) + r, gh // 2
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill="white")
-    _disegna_icona(d, ICONE.get(img["concetto"], "info"), cx, cy, int(r * .72), col, hl)
     ft = str(next((BASE / "fonts").glob(f"*{NOMI_PESO[PESO_TITOLO]}.ttf")))
-    testo = re.sub(r"^(l|dell|all|nell|sull|un|d)'|^(il|lo|la|i|gli|le|un|uno|una) ", "", img["parola"],
-                   flags=re.I).upper()
-    x0 = cx + r + int(gh * 0.12)
-    ris = adatta_testo(ft, testo, gw - x0 - int(gh * 0.1), gh * 0.55, int(gh * 0.34), int(gh * 0.1), 2)
-    if ris:
-        f, righe, passo, top, alt = ris
-        y0 = cy - alt / 2 - top - gh * 0.03
-        for k, riga in enumerate(righe):
-            d.text((x0, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
-        yb = y0 + top + alt + gh * 0.06
-        d.rounded_rectangle((x0, yb, x0 + gh * 0.4, yb + gh * 0.04), radius=gh * 0.02, fill=hl)
+    testo = (img.get("etichetta") or re.sub(r"^(l|dell|all|nell|sull|un|d)'|^(il|lo|la|i|gli|le|un|uno|una) ", "",
+                                            img["parola"], flags=re.I)).upper().strip(" ,.;:")
+    if gw / gh >= 1.3:                      # card orizzontale: icona a sinistra, parola a destra
+        r = int(gh * 0.36)
+        cx, cy = int(gh * 0.12) + r, gh // 2
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill="white")
+        _disegna_icona(d, ICONE.get(img["concetto"], "info"), cx, cy, int(r * .72), col, hl)
+        x0 = cx + r + int(gh * 0.12)
+        ris = adatta_testo(ft, testo, gw - x0 - int(gh * 0.1), gh * 0.55, int(gh * 0.34), int(gh * 0.1), 2)
+        if ris:
+            f, righe, passo, top, alt = ris
+            y0 = cy - alt / 2 - top - gh * 0.03
+            for k, riga in enumerate(righe):
+                d.text((x0, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
+            yb = y0 + top + alt + gh * 0.06
+            d.rounded_rectangle((x0, yb, x0 + gh * 0.4, yb + gh * 0.04), radius=gh * 0.02, fill=hl)
+    else:                                   # card verticale (accanto alla figura): icona sopra, parola sotto
+        r = int(min(gw * 0.32, gh * 0.24))
+        cx, cy = gw // 2, int(gh * 0.36)
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill="white")
+        _disegna_icona(d, ICONE.get(img["concetto"], "info"), cx, cy, int(r * .72), col, hl)
+        ris = adatta_testo(ft, testo, gw * 0.86, gh * 0.26, int(gw * 0.17), int(gw * 0.06), 3)
+        if ris:
+            f, righe, passo, top, alt = ris
+            y0 = cy + r + gh * 0.07 - top
+            for k, riga in enumerate(righe):
+                d.text((gw / 2, y0 + k * passo), riga, font=f, fill="white", anchor="ms")
+            yb = y0 + top + alt + gh * 0.04
+            d.rounded_rectangle((gw / 2 - gw * 0.12, yb, gw / 2 + gw * 0.12, yb + gh * 0.015),
+                                radius=gh * 0.008, fill=hl)
     dest = BASE / "immagini" / "auto" / f"grafica_{img['concetto']}_{gw}x{gh}.png"
     dest.parent.mkdir(parents=True, exist_ok=True)
     g.save(dest)
@@ -1283,6 +1386,8 @@ def trova_numeri(parole, immagini, durata):
             unita = succ.upper()
         elif not (m.group(2) is None and 1950 <= val_int <= 2100):
             continue                      # numero senza unità: non lo evidenzio
+        elif i > 0 and norme[i - 1] in ("dal", "dallanno", "anno", "dall"):
+            valore = "DAL " + valore
         testo = (valore + " " + unita).strip()
         inizio = max(0.0, p["start"] - IMG_ANTICIPO)
         fine = inizio + NUM_DURATA
@@ -1388,19 +1493,43 @@ def calcola_zoom(src, iv, inq):
             x, y, w, h = [v * 2 for v in max(det, key=lambda d: d[2] * d[3])]
             facce.append((x, y, w, h))
     if not facce:
-        return {"scala": 0.68, "x": round(W * 0.16), "y": CARD_SOPRA_Y + ch + 25, "motivo": "volto non trovato"}
+        return {"scala": 0.68, "x": round(W * 0.16), "y": CARD_SOPRA_Y + ch + 25, "motivo": "volto non trovato",
+                "lato": "sinistra", "riposo": {"scala": 1.0, "x": 0, "y": 0}, "sotto_viso": 760}
     alti = sorted(y - 0.35 * h for x, y, w, h in facce)           # capelli sopra la fronte
     bassi = sorted(y + 1.05 * h for x, y, w, h in facce)          # mento
     testa = alti[int(len(alti) * 0.1)]                            # valori tipici, non i casi estremi
     mento = bassi[min(len(bassi) - 1, int(len(bassi) * 0.9))]
     cx = statistics.median(x + w / 2 for x, y, w, h in facce)
+    fw = statistics.median(w for x, y, w, h in facce)
+    # a riposo la scritta fissa non deve mai toccare la testa: se serve, rimpicciolisco un po' il video
+    limite_titolo = fondo_titolo() + 12
+    sr = 1.0 if testa >= limite_titolo else clamp((H - limite_titolo) / (H - testa), 0.6, 1.0)
+    riposo = {"scala": r3(sr), "x": round(cx * (1 - sr)), "y": round(H * (1 - sr))}
+    testa_r, mento_r = riposo["y"] + sr * testa, riposo["y"] + sr * mento
+    if DISPOSIZIONE == "accanto":
+        lato = "sinistra" if cx >= W / 2 else "destra"           # la card va dove c'è più posto
+        cw = CARD_ACCANTO[0]
+        s = 0.86
+        spalle = 1.3 * fw                                          # mezza larghezza delle spalle
+        if lato == "sinistra":
+            x0 = SAFE[0] + CARD_RIENTRO + cw + 20 - s * (cx - spalle)
+        else:
+            x0 = SAFE[2] - CARD_RIENTRO - cw - 20 - s * (cx + spalle)
+        y0 = H * (1 - s)
+        if y0 + s * testa < limite_titolo:
+            y0 = limite_titolo - s * testa
+        return {"scala": s, "x": round(x0), "y": round(y0), "lato": lato, "riposo": riposo,
+                "sotto_viso": round(mento_r + 25),
+                "motivo": f"viso x {cx - fw / 2:.0f}–{cx + fw / 2:.0f}, testa da y {testa_r:.0f} "
+                          f"(scritta fissa fino a y {fondo_titolo()}) in {len(facce)}/24 campioni"}
     sotto_card = CARD_SOPRA_Y + ch + 25
     limite_mento = SUB_ZONA[0] - 15
     s = min(1.0, (H - sotto_card) / (H - testa), (limite_mento - sotto_card) / max(1, mento - testa))
     s = clamp(s, 0.5, 1.0)
     y0 = sotto_card - s * testa
     x0 = clamp(W / 2 - s * cx, 0, W - s * W)
-    return {"scala": r3(s), "x": round(x0), "y": round(y0),
+    return {"scala": r3(s), "x": round(x0), "y": round(y0), "lato": "sopra", "riposo": riposo,
+            "sotto_viso": round(mento_r + 25),
             "motivo": f"testa da y {testa:.0f} a {mento:.0f} (cx {cx:.0f}) in {len(facce)}/24 campioni"}
 
 
@@ -1431,14 +1560,19 @@ def durata_uscita(piano):
 
 
 def inizio_chiusura(piano):
-    return durata_uscita(piano) - CHIUSURA_DURATA if CHIUSURA_TITOLO else None
+    if not CHIUSURA_TITOLO:
+        return None
+    t = durata_uscita(piano) - CHIUSURA_DURATA
+    if DISPOSIZIONE == "accanto" and piano.get("sottotitoli"):   # la card larga copre i sottotitoli: aspetto
+        t = max(t, min(piano["sottotitoli"][-1]["fine"] + 0.1, durata_uscita(piano) - 2.0))
+    return t
 
 
 def crea_piano(src, iv, trascr, fonts):
     parole = [p for s in trascr["segmenti"] for p in s["parole"]]
     parole = normalizza_parole(parole)
-    mis = Misuratore(fonts["sottotitoli"]["path"], SUB_FONT_PX)
-    blocchi = crea_blocchi(parole, mis, iv["durata"])
+    px0 = SUB_PAROLE_PX if SUB_STILE == "parole" else SUB_FONT_PX
+    blocchi = crea_sottotitoli(parole, fonts, px0, iv["durata"])
     print("→ Cerco i concetti visivi e le immagini")
     # immagini e numeri devono finire prima del cartello finale
     limite = iv["durata"] + CHIUSURA_CODA - CHIUSURA_DURATA - 0.3 if CHIUSURA_TITOLO else iv["durata"]
@@ -1447,16 +1581,16 @@ def crea_piano(src, iv, trascr, fonts):
     numeri = trova_numeri(parole, immagini, limite)
     print("→ Analizzo l'inquadratura (rilevamento volto)")
     inq = analizza_inquadratura(src, iv)
-    zoom = calcola_zoom(src, iv, inq) if DISPOSIZIONE == "sopra_testa" else None
+    zoom = calcola_zoom(src, iv, inq) if DISPOSIZIONE in ("sopra_testa", "accanto") else None
     piano = {
         "sorgente": str(Path(src).relative_to(BASE)) if Path(src).is_relative_to(BASE) else str(src),
         "durata": r3(iv["durata"]), "sorgente_wxh": [iv["w"], iv["h"]], "inquadratura": inq,
         "disposizione": DISPOSIZIONE, "zoom": zoom,
-        "sottotitoli_px": SUB_FONT_PX, "sottotitoli_max_caratteri": SUB_MAX_CARATTERI,
+        "sottotitoli_stile": SUB_STILE, "sottotitoli_px": px0, "sottotitoli_max_caratteri": SUB_MAX_CARATTERI,
         "immagini": [{"id": k + 1, **i} for k, i in enumerate(immagini)],
         "numeri": numeri,
-        "sottotitoli": [{"inizio": b["inizio"], "fine": b["fine"], "righe": b["righe"],
-                         "parole": b["parole"]} for b in blocchi],
+        "sottotitoli": [{"inizio": b["inizio"], "fine": b["fine"], "righe": b["righe"], "parole": b["parole"],
+                         **({"px": b["px"]} if "px" in b else {})} for b in blocchi],
     }
     salva_piano(piano)
     esporta_srt(piano, BASE / "output" / "sottotitoli_corretti.srt")
@@ -1476,7 +1610,8 @@ def mostra_piano(piano):
     righe.append(f"**Inquadratura:** {inq['modalita']} — {inq['motivo']}\n")
     if piano.get("zoom"):
         z = piano["zoom"]
-        righe.append(f"**Immagini sopra la testa:** quando compare una card il video scende al {z['scala']:.0%} "
+        dove = "sopra la testa" if piano.get("disposizione") == "sopra_testa" else f"a {z.get('lato')} della figura"
+        righe.append(f"**Immagini {dove}:** quando compare una card il video passa al {z['scala']:.0%} e si sposta "
                      f"(viso sempre libero) — {z['motivo']}\n")
     righe.append(f"**Titolo fisso:** {TITOLO.upper()}  \n**Ticker:** {TICKER}\n")
     if CHIUSURA_TITOLO:
@@ -1559,6 +1694,22 @@ def genera_ass(piano, fonts, dest):
         marginl=0, marginr=0, marginv=0)
     hl = ass_colore(COLORE_EVIDENZIAZIONE)
     pos = f"{{\\an5\\pos({W // 2},{SUB_CY})}}"
+    if piano.get("sottotitoli_stile") == "parole":
+        ftit = fonts["titolo"]
+        subs.styles["Sub"] = pysubs2.SSAStyle(
+            fontname=ftit["famiglia"], fontsize=round(px * ftit["rapporto_ass"], 1),
+            primarycolor=pysubs2.Color(255, 255, 255, 0), secondarycolor=pysubs2.Color(255, 255, 255, 0),
+            outlinecolor=pysubs2.Color(0, 0, 0, 0), backcolor=pysubs2.Color(0, 0, 0, 90),
+            bold=False, outline=6, shadow=3, alignment=pysubs2.Alignment.MIDDLE_CENTER,
+            marginl=0, marginr=0, marginv=0)
+        for b in piano["sottotitoli"]:
+            testo = " ".join(b["righe"]).replace("{", "(").replace("}", ")").replace("\\", "/")
+            fs = f"\\fs{round(b.get('px', px) * ftit['rapporto_ass'], 1)}" if b.get("px", px) != px else ""
+            pop = "\\fscx88\\fscy88\\t(0,90,\\fscx100\\fscy100)"
+            subs.append(pysubs2.SSAEvent(start=int(round(b["inizio"] * 1000)), end=int(round(b["fine"] * 1000)),
+                                         style="Sub", text=f"{{\\an5\\pos({W // 2},{SUB_CY}){fs}{pop}}}{testo}"))
+        subs.save(str(dest))
+        return
 
     def pulisci(s):
         return s.replace("{", "(").replace("}", ")").replace("\\", "/")
@@ -1616,11 +1767,68 @@ def verifica_ass(ass_rel, durata):
 # =====================================================================
 #  GRAFICA (titolo, card immagini, numeri, ticker) → flusso RGBA per ffmpeg
 # =====================================================================
-def geometria_card():
+_TITOLO_CACHE = {}
+
+
+def immagine_titolo(ft=None):
+    """Fascia del titolo fisso (RGBA, larga quanto l'area utile). Con "occhiello | testo" l'occhiello
+    è giallo e più grande, il testo bianco su max 2 righe. L'altezza si adatta al testo."""
+    from PIL import Image, ImageDraw
+    ft = ft or str(next((BASE / "fonts").glob(f"*{NOMI_PESO[PESO_TITOLO]}.ttf")))
+    chiave = (ft, TITOLO, COLORE_PRINCIPALE, COLORE_EVIDENZIAZIONE)
+    if chiave in _TITOLO_CACHE:
+        return _TITOLO_CACHE[chiave]
+    tw = TITOLO_BOX[2] - TITOLO_BOX[0]
+    col, hl = hex_rgb(COLORE_PRINCIPALE), hex_rgb(COLORE_EVIDENZIAZIONE)
+    if "|" in TITOLO:
+        occhiello, testo = [x.strip().upper() for x in TITOLO.split("|", 1)]
+        r1 = adatta_testo(ft, occhiello, tw - 56, 70, 64, 36, 1)
+        r2 = adatta_testo(ft, testo, tw - 56, 120, 50, 30, 2)
+        gap, pad = 14, 16
+        th = int(pad + r1[4] + gap + r2[4] + pad)
+        img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        img.paste(Image.new("RGBA", (tw, th), (*col, 235)), (0, 0), maschera_arrotondata(tw, th, 16))
+        d = ImageDraw.Draw(img)
+        f, righe, passo, top, alt = r1
+        d.text((tw / 2, pad - top), righe[0], font=f, fill=(*hl, 255), anchor="ms")
+        y2 = pad + alt + gap
+        f, righe, passo, top, alt = r2
+        for k, riga in enumerate(righe):
+            d.text((tw / 2, y2 - top + k * passo), riga, font=f, fill="white", anchor="ms")
+    else:
+        th = TITOLO_BOX[3] - TITOLO_BOX[1]
+        img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        img.paste(Image.new("RGBA", (tw, th), (*col, 230)), (0, 0), maschera_arrotondata(tw, th, 16))
+        ris = adatta_testo(ft, TITOLO.upper(), tw - 2 * 28, th - 2 * 12, 62, 44, 2)
+        if ris is None:
+            ris = adatta_testo(ft, TITOLO.upper(), tw - 2 * 20, th - 2 * 8, 44, 30, 3)
+            print("   ! Titolo troppo lungo: ridotto sotto i 44 px. Accorcialo se possibile.")
+        f, righe, passo, top, alt = ris
+        d = ImageDraw.Draw(img)
+        y0 = (th - alt) / 2 - top
+        for k, r in enumerate(righe):
+            d.text((tw / 2, y0 + k * passo), r, font=f, fill="white", anchor="ms")
+    _TITOLO_CACHE[chiave] = img
+    return img
+
+
+def fondo_titolo():
+    return TITOLO_BOX[1] + immagine_titolo().height
+
+
+def geometria_card(lato="sinistra"):
     """(larghezza, altezza, centro x, centro y) della card secondo la DISPOSIZIONE."""
     if DISPOSIZIONE == "sopra_testa":
-        return CARD_W, CARD_SOPRA_ALTEZZA, CARD_CX, CARD_SOPRA_Y + CARD_SOPRA_ALTEZZA // 2
+        y0 = max(CARD_SOPRA_Y, fondo_titolo() + 15)
+        return CARD_W, CARD_SOPRA_ALTEZZA, CARD_CX, y0 + CARD_SOPRA_ALTEZZA // 2
+    if DISPOSIZIONE == "accanto":
+        cw = CARD_ACCANTO[0]
+        alto, basso = fondo_titolo() + 30, SUB_ZONA[0] - 30
+        ch = min(CARD_ACCANTO[1], basso - alto)
+        cx = SAFE[0] + CARD_RIENTRO + cw // 2 if lato == "sinistra" else SAFE[2] - CARD_RIENTRO - cw // 2
+        return cw, ch, cx, (alto + basso) // 2
     return CARD_W, CARD_H, CARD_CX, CARD_CY
+
 
 
 def maschera_arrotondata(w, h, r, ss=4):
@@ -1696,20 +1904,7 @@ class Grafica:
         ft, fs = fonts["titolo"]["path"], fonts["sottotitoli"]["path"]
 
         # --- titolo ---
-        tw, th = TITOLO_BOX[2] - TITOLO_BOX[0], TITOLO_BOX[3] - TITOLO_BOX[1]
-        self.titolo = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
-        fascia = Image.new("RGBA", (tw, th), (*self.col, 230))
-        self.titolo.paste(fascia, (0, 0), maschera_arrotondata(tw, th, 16))
-        ris = adatta_testo(ft, TITOLO.upper(), tw - 2 * 28, th - 2 * 12, 62, 44, 2)
-        if ris is None:
-            ris = adatta_testo(ft, TITOLO.upper(), tw - 2 * 20, th - 2 * 8, 44, 30, 3)
-            print("   ! Titolo troppo lungo: ridotto sotto i 44 px. Accorcialo se possibile.")
-        f, righe, passo, top, alt = ris
-        d = ImageDraw.Draw(self.titolo)
-        y0 = (th - alt) / 2 - top
-        for k, r in enumerate(righe):
-            d.text((tw / 2, y0 + k * passo), r, font=f, fill="white", anchor="ms")
-        self.titolo_px = f.size
+        self.titolo = immagine_titolo(ft)
 
         # --- ticker ---
         kw, kh = TICKER_BOX[2] - TICKER_BOX[0], TICKER_BOX[3] - TICKER_BOX[1]
@@ -1741,7 +1936,7 @@ class Grafica:
 
         # --- card ---
         b = CARD_BORDO
-        CW, CH, self.ccx, self.ccy = geometria_card()
+        CW, CH, self.ccx, self.ccy = geometria_card((piano.get("zoom") or {}).get("lato", "sinistra"))
         self.iw, self.ih = CW - 2 * b, CH - 2 * b
         self.mask_card = maschera_arrotondata(CW, CH, CARD_RAGGIO)
         self.mask_inner = maschera_arrotondata(self.iw, self.ih, CARD_RAGGIO - b)
@@ -1787,25 +1982,39 @@ class Grafica:
         # --- cartello finale ---
         self.chiusura = None
         if CHIUSURA_TITOLO:
-            card = self.ombra.copy()
-            c = self.card_bianca.copy()
-            c.paste(Image.new("RGBA", (self.iw, self.ih), (*self.col, 255)), (b, b), self.mask_inner)
+            cw_c, ch_c, cy_c = CW, CH, self.ccy
+            if DISPOSIZIONE == "accanto":            # card larga sotto il viso: c'è da leggere (es. un'email)
+                alto = (piano.get("zoom") or {}).get("sotto_viso", 760)
+                cw_c, ch_c = CARD_W, min(440, SUB_ZONA[1] - alto)
+                cy_c = alto + ch_c / 2
+            iw_c, ih_c = cw_c - 2 * b, ch_c - 2 * b
+            m_card = maschera_arrotondata(cw_c, ch_c, CARD_RAGGIO)
+            om = Image.new("L", (cw_c + 2 * self.P, ch_c + 2 * self.P), 0)
+            om.paste(m_card.point(lambda v: int(v * 0.55)), (self.P, self.P + 10))
+            card = Image.new("RGBA", om.size, (0, 0, 0, 0))
+            card.putalpha(om.filter(ImageFilter.GaussianBlur(13)))
+            c = Image.new("RGBA", (cw_c, ch_c), (255, 255, 255, 0))
+            c.putalpha(m_card)
+            c.paste(Image.new("RGBA", (iw_c, ih_c), (*self.col, 255)), (b, b),
+                    maschera_arrotondata(iw_c, ih_c, CARD_RAGGIO - b))
             d = ImageDraw.Draw(c)
-            f1, r1, p1, t1, a1 = adatta_testo(ft, CHIUSURA_TITOLO.upper(), self.iw - 70, self.ih * 0.50, 92, 24, 2)
-            f2, r2, p2, t2, a2 = adatta_testo(ft, CHIUSURA_TESTO.upper(), self.iw - 70, self.ih * 0.28, 70, 20, 2)
-            lineetta = self.ih >= 400                   # nella card bassa (sopra la testa) non c'è spazio
-            spazio = self.ih * (0.11 if lineetta else 0.09)
-            y = b + (self.ih - a1 - spazio - a2) / 2 - t1
+            sotto = " ".join(w if "@" in w else w.upper() for w in CHIUSURA_TESTO.split())
+            f1, r1, p1, t1, a1 = adatta_testo(ft, CHIUSURA_TITOLO.upper(), iw_c - 70, ih_c * 0.42, 92, 24, 2)
+            f2, r2, p2, t2, a2 = adatta_testo(ft, sotto, iw_c - 70, ih_c * 0.36, 60, 20, 2)
+            lineetta = False                            # la lineetta sembrava una sottolineatura del titolo
+            spazio = ih_c * (0.11 if lineetta else 0.09)
+            y = b + (ih_c - a1 - spazio - a2) / 2 - t1
             for k, riga in enumerate(r1):
-                d.text((CW / 2, y + k * p1), riga, font=f1, fill="white", anchor="ms")
+                d.text((cw_c / 2, y + k * p1), riga, font=f1, fill="white", anchor="ms")
             if lineetta:
                 ybar = y + t1 + a1 + spazio / 2
-                d.rounded_rectangle((CW / 2 - 90, ybar - 4, CW / 2 + 90, ybar + 4), radius=4, fill=(*self.hl, 255))
+                d.rounded_rectangle((cw_c / 2 - 90, ybar - 4, cw_c / 2 + 90, ybar + 4), radius=4,
+                                    fill=(*self.hl, 255))
             y2 = y + t1 + a1 + spazio - t2
             for k, riga in enumerate(r2):
-                d.text((CW / 2, y2 + k * p2), riga, font=f2, fill=(*self.hl, 255), anchor="ms")
+                d.text((cw_c / 2, y2 + k * p2), riga, font=f2, fill=(*self.hl, 255), anchor="ms")
             card.alpha_composite(c, (self.P, self.P))
-            self.chiusura = (inizio_chiusura(piano), card)
+            self.chiusura = (inizio_chiusura(piano), card, (CARD_CX, cy_c))
 
         self.soglia = [0] * 17 + [255] * 239
         self.violazioni = []
@@ -1860,13 +2069,15 @@ class Grafica:
         for n, tela in self.numeri:
             tl = t - n["inizio"]
             if 0 <= tl < n["durata"]:
-                scala = 0.6 + 0.4 * ease_out_back(tl / 0.25)
+                scala = min(1.03, 0.6 + 0.4 * ease_out_back(tl / 0.25))   # rimbalzo leggero: resta nei margini
                 alpha = clamp(tl / 0.12, 0, 1) * (clamp((n["durata"] - tl) / 0.25, 0, 1))
                 self._incolla_centro(f, self._scala_alpha(tela, scala, alpha))
         if self.chiusura and t >= self.chiusura[0]:
             tl = t - self.chiusura[0]
             scala = 0.7 + 0.3 * ease_out_back(tl / 0.35)
-            self._incolla_centro(f, self._scala_alpha(self.chiusura[1], scala, clamp(tl / 0.15, 0, 1)))
+            tela = self._scala_alpha(self.chiusura[1], scala, clamp(tl / 0.15, 0, 1))
+            cx_c, cy_c = self.chiusura[2]
+            f.alpha_composite(tela, (round(cx_c - tela.width / 2), round(cy_c - tela.height / 2)))
         if controlla and t >= 0.5:
             bb = f.getchannel("A").point(self.soglia).getbbox()
             if bb and (bb[0] < SAFE[0] or bb[1] < SAFE[1] or bb[2] > SAFE[2] or bb[3] > SAFE[3]):
@@ -1926,7 +2137,7 @@ def intervalli_card(piano):
     """Intervalli in cui c'è una card (immagine, numero, cartello), uniti se vicini."""
     ev = [(i["inizio"], i["inizio"] + i["durata"]) for i in piano["immagini"] if i["file"]]
     ev += [(n["inizio"], n["inizio"] + n["durata"]) for n in piano["numeri"]]
-    if CHIUSURA_TITOLO:
+    if CHIUSURA_TITOLO and DISPOSIZIONE != "accanto":
         ev.append((inizio_chiusura(piano), durata_uscita(piano) + 1))
     uniti = []
     for a_, b_ in sorted(ev):
@@ -1958,7 +2169,7 @@ def renderizza(piano, fonts, ass_rel, dest, anteprima):
     n_frame = int(round(durata * FPS))
     loud = misura_loudness(src)
     graf = Grafica(piano, fonts)
-    zoom = piano.get("zoom") if DISPOSIZIONE == "sopra_testa" else None
+    zoom = piano.get("zoom") if DISPOSIZIONE in ("sopra_testa", "accanto") else None
     intervalli = intervalli_card(piano) if zoom else []
     tpad = f",tpad=stop_mode=clone:stop_duration={coda + 0.5:.2f}" if coda > 0 else ""
     apad = ",apad" if coda > 0 else ""
@@ -2000,11 +2211,14 @@ def renderizza(piano, fonts, ass_rel, dest, anteprima):
             ultimo_buf = buf
             nitido = Image.frombytes("RGB", (W, H), buf[:dim])
             q = quota_zoom(t, intervalli) if zoom else 0.0
-            if q > 0.001:
+            rp = (zoom or {}).get("riposo") or {"scala": 1.0, "x": 0, "y": 0}
+            sc = rp["scala"] + (zoom["scala"] - rp["scala"]) * q if zoom else 1.0
+            px = rp["x"] + (zoom["x"] - rp["x"]) * q if zoom else 0
+            py = rp["y"] + (zoom["y"] - rp["y"]) * q if zoom else 0
+            if sc < 0.999 or abs(px) > 0.5 or abs(py) > 0.5:
                 quadro = Image.frombytes("RGB", (W, H), buf[dim:])
-                sc = 1 - (1 - zoom["scala"]) * q
-                piccolo = nitido.resize((round(W * sc), round(H * sc)), Image.BILINEAR)
-                quadro.paste(piccolo, (round(zoom["x"] * q), round(zoom["y"] * q)))
+                piccolo = nitido if sc >= 0.999 else nitido.resize((round(W * sc), round(H * sc)), Image.BILINEAR)
+                quadro.paste(piccolo, (round(px), round(py)))
             else:
                 quadro = nitido
             gr = graf.frame(t, controlla=(k % 5 == 0))
@@ -2087,7 +2301,7 @@ def controlla_risultato(piano, out, trascr, violazioni_grafica):
     if scarti:
         report.append(f"{'sincronia':<12} immagini/numeri: scarto max dalla parola {max(scarti) * 1000:.0f} ms "
                       f"({'ok' if max(scarti) <= 1 / FPS else 'modificato a mano'})")
-    sotto1 = [b for b in piano["sottotitoli"] if b["fine"] - b["inizio"] < 0.99]
+    sotto1 = [b for b in piano["sottotitoli"] if b["fine"] - b["inizio"] < (0.34 if piano.get("sottotitoli_stile") == "parole" else 0.99)]
     sopra3 = [b for b in piano["sottotitoli"] if b["fine"] - b["inizio"] > 3.01]
     report.append(f"{'sottotitoli':<12} {len(piano['sottotitoli'])} blocchi, <1 s: {len(sotto1)}, >3 s: {len(sopra3)}; "
                   f"karaoke sui tempi parola di Whisper")
@@ -2150,7 +2364,7 @@ def crea_copertina(piano, fonts, dest):
     img.alpha_composite(nero)
     # titolo grande: prima parte bianca, dopo i ":" nel colore di evidenziazione
     ft = fonts["titolo"]["path"]
-    testo = TITOLO.upper()
+    testo = TITOLO.upper().replace(" | ", ": ").replace("|", ": ")
     bw = SAFE[2] - SAFE[0]
     ris = None
     for max_righe, px_min in ((2, 84), (3, 72), (4, 56)):      # meno righe possibile, ma testo grande
@@ -2172,7 +2386,8 @@ def crea_copertina(piano, fonts, dest):
         larg = f.getlength(r)
         x = W / 2 - larg / 2
         for j, p in enumerate(parole):
-            col = hex_rgb(COLORE_EVIDENZIAZIONE) if gialla else (255, 255, 255)
+            # con "occhiello | testo" è giallo l'occhiello, altrimenti la parte dopo i due punti
+            col = hex_rgb(COLORE_EVIDENZIAZIONE) if (gialla != ("|" in TITOLO)) else (255, 255, 255)
             d.text((x, y0 + k * passo), p, font=f, fill=col, anchor="ls")
             x += f.getlength(p + " ")
             if p.endswith(":"):
@@ -2252,14 +2467,16 @@ def main():
         print(f"   ! {len(problemi)} campioni di sottotitoli fuori zona (es. t={problemi[0][0]:.1f}s "
               f"bbox={problemi[0][1]}): riduco e ridispongo")
         global SUB_MAX_CARATTERI
-        if mis_px - 2 >= SUB_FONT_PX_MIN:
+        if piano.get("sottotitoli_stile") == "parole":
+            mis_px -= 4
+        elif mis_px - 2 >= SUB_FONT_PX_MIN:
             mis_px -= 2
         else:
             SUB_MAX_CARATTERI -= 2
         parole = [p for b in piano["sottotitoli"] for p in b["parole"]]
-        blocchi = crea_blocchi(parole, Misuratore(fonts["sottotitoli"]["path"], mis_px), piano["durata"])
-        piano["sottotitoli"] = [{"inizio": b["inizio"], "fine": b["fine"], "righe": b["righe"],
-                                 "parole": b["parole"]} for b in blocchi]
+        blocchi = crea_sottotitoli(parole, fonts, mis_px, piano["durata"])
+        piano["sottotitoli"] = [{"inizio": b["inizio"], "fine": b["fine"], "righe": b["righe"], "parole": b["parole"],
+                                 **({"px": b["px"]} if "px" in b else {})} for b in blocchi]
         piano["sottotitoli_px"], piano["sottotitoli_max_caratteri"] = mis_px, SUB_MAX_CARATTERI
         salva_piano(piano)
 
