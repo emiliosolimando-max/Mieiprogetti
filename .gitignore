@@ -1,7 +1,7 @@
 input/
 output/
 immagini/auto/
-fonts/
+/fonts/
 __pycache__/
 modelli/
 archivio/
