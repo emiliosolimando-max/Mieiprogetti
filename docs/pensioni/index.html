@@ -127,7 +127,7 @@
   //  Esempio con FormSubmit (arrivano per email, senza account):
   //    "https://formsubmit.co/ajax/solimandoemilio@libero.it"
   // =====================================================================
-  const INDIRIZZO_INVIO = "";
+  const INDIRIZZO_INVIO = "https://formsubmit.co/ajax/solimandoemilio@libero.it";
 
   const modulo = document.getElementById("modulo");
   const esitoErrore = modulo.querySelector(".esito-errore");
@@ -201,6 +201,9 @@
         body: JSON.stringify(dati),
       });
       if (!risposta.ok) throw new Error("HTTP " + risposta.status);
+      // FormSubmit risponde 200 anche quando non ha inoltrato (es. indirizzo non ancora attivato)
+      const esito = await risposta.json().catch(() => ({}));
+      if (esito.success === false || esito.success === "false") throw new Error(esito.message || "non inviato");
       modulo.style.display = "none";
       const grazie = document.getElementById("grazie");
       grazie.style.display = "block";
