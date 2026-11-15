@@ -50,8 +50,9 @@ Quando manda un video vuole il montaggio completo senza dover rispiegare nulla.
   solimandoemilio@libero.it, oppure "scrivi nei commenti".
 - Colori: blu #0B3D91 e giallo #FFD400, font Montserrat (ExtraBold per i titoli, SemiBold per i sottotitoli).
 - Audio normalizzato a -14 LUFS.
-- Consegna sempre anche una **versione leggera** (`<nome>_FACEBOOK_leggero.mp4`, circa 2,6 Mbps): dal telefono
-  l'utente non riesce a scaricare file da 100+ MB.
+- Il video va poi caricato su Facebook dal telefono: consegna come file principale la **versione per telefono**
+  (`<nome>_FACEBOOK_telefono.mp4`, 1080x1350, ~1,15 Mbps in due passate, audio 96k, circa 20 MB per 2 minuti).
+  I file da 100+ MB non si scaricano dalla chat.
 
 ## Note pratiche
 - **Primi piani mentre cammina, con occhiali da sole e cappellino:** il rilevamento del volto sbaglia. Misura a
