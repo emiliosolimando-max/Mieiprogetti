@@ -23,9 +23,11 @@ immagini (inizio, durata, file), numeri in evidenza, testo dei sottotitoli ("rig
 # =====================================================================
 FILE_SORGENTE = None   # es. "input/pensioni.mp4"; None = primo video trovato in ./input/
 # Scritta fissa sopra la testa. Con " | " la prima parte diventa un occhiello giallo più grande.
-TITOLO = "NOVITÀ PENSIONI | Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza"
-TICKER = ("Novità pensioni • Benefici pensionistici ex INPDAP del comparto Difesa e Sicurezza • "
-          "Scrivi a solimandoemilio@libero.it o nei commenti • Condividi con chi può interessare •")
+# Una terza parte dopo un secondo " | " va in una riga più piccola (es. un avvertimento).
+TITOLO = ("EVENTO GRATUITO | Come acquistare immobili a sconto direttamente dalle banche prima che vadano in asta"
+          " | Attenzione: non è saldo e stralcio")
+TICKER = ("Evento gratuito • Come acquistare immobili a sconto dalle banche prima dell'asta • "
+          "Attenzione: non è saldo e stralcio • Registrati dal link nel post • Condividi con chi può interessare •")
 COLORE_PRINCIPALE = "#0B3D91"      # fascia titolo / ticker
 COLORE_EVIDENZIAZIONE = "#FFD400"  # parola pronunciata, numeri in evidenza
 FONT_FAMIGLIA = "Montserrat"       # scaricato da Google Fonts se manca
@@ -41,8 +43,8 @@ SHERPA_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models
 INQUADRATURA = "auto"              # "auto" | "ritaglio" (crop sul volto) | "sfocato" (sfondo sfocato)
 
 # Cartello finale (lasciare CHIUSURA_TITOLO = "" per non metterlo)
-CHIUSURA_TITOLO = "CONTROLLA LA TUA PENSIONE"
-CHIUSURA_TESTO = "Scrivi a solimandoemilio@libero.it o nei commenti"
+CHIUSURA_TITOLO = "EVENTO GRATUITO"
+CHIUSURA_TESTO = "Registrati dal link nel post"
 CHIUSURA_DURATA = 4.0     # secondi di cartello
 CHIUSURA_CODA = 2.0       # secondi aggiunti in fondo (ultimo fotogramma fermo) per leggerlo con calma
 # Se per un concetto non c'è né una foto tua né Pexels, crea una grafica (icona + parola chiave)
@@ -52,8 +54,8 @@ GRAFICHE_SE_MANCA_FOTO = True
 #                  il viso non viene mai coperto (consigliato per i selfie/primi piani)
 #  "centro"      = card grande al centro (copre il viso se lo speaker è in primo piano)
 #  "accanto"     = lo speaker si sposta di lato (e si rimpicciolisce un po'), la card va nello spazio accanto
-DISPOSIZIONE = "accanto"
-CARD_SOPRA_ALTEZZA = 270  # altezza della card sopra la testa (px)
+DISPOSIZIONE = "sopra_testa"
+CARD_SOPRA_ALTEZZA = 230  # altezza della card sopra la testa (px)
 CARD_ACCANTO = (420, 520)  # larghezza, altezza massima della card accanto alla figura
 
 # Sottotitoli: "parole" = 1–3 parole alla volta, grandi e bianche; "frasi" = 2 righe con parola in giallo
@@ -1169,10 +1171,14 @@ ICONE = {"ricalcolo": "calcolatrice", "contributi": "documento", "arretrati": "e
          "patronato": "ufficio", "verifica": "lente", "errori": "attenzione", "scadenza": "calendario", "assegno": "euro",
          "pensionati": "persone", "inps": "ufficio", "busta_paga": "documento", "agenzia_entrate": "documento",
          "soldi": "euro", "assegno_unico": "euro", "legge": "documento", "governo": "ufficio",
-         "ministero": "ufficio", "tribunale": "ufficio", "comune": "ufficio", "banca": "euro",
+         "ministero": "ufficio", "tribunale": "ufficio", "comune": "ufficio",
          "famiglia": "persone", "giovani": "persone", "lavoro": "persone", "inflazione": "euro",
          "difesa_sicurezza": "scudo", "forze_armate": "scudo", "carabinieri": "scudo", "polizia": "scudo",
-         "email": "busta", "commenti": "fumetto", "diritti": "bilancia", "avvocato": "bilancia"}
+         "email": "busta", "commenti": "fumetto", "diritti": "bilancia", "avvocato": "bilancia",
+         "immobili": "casa", "mutuo": "casa", "aste": "martello", "sconto": "percentuale", "banca": "ufficio",
+         "gestionale": "monitor", "operatori": "persone", "evento": "calendario", "procedura": "documento",
+         "creditore": "fumetto", "supporto": "persone", "opportunita": "euro", "portali": "lente",
+         "numeri": "calcolatrice", "saldo_stralcio": "attenzione", "legale": "bilancia"}
 
 
 def _font_icona(px):
@@ -1258,6 +1264,32 @@ def _disegna_icona(d, tipo, cx, cy, r, col, acc):
             d.line((x, cy - r * .5, x - r * .28, cy + r * .1), fill=col, width=max(3, w // 2))
             d.line((x, cy - r * .5, x + r * .28, cy + r * .1), fill=col, width=max(3, w // 2))
             d.chord((x - r * .32, cy - r * .1, x + r * .32, cy + r * .3), 0, 180, fill=acc)
+    elif tipo == "casa":
+        d.polygon([(cx - r * .9, cy - r * .05), (cx, cy - r * .85), (cx + r * .9, cy - r * .05)], fill=col)
+        d.rectangle((cx - r * .65, cy - r * .1, cx + r * .65, cy + r * .8), fill=col)
+        d.rectangle((cx - r * .18, cy + r * .3, cx + r * .18, cy + r * .8), fill=acc)
+        d.rectangle((cx + r * .3, cy + r * .05, cx + r * .52, cy + r * .27), fill=acc)
+    elif tipo == "martello":
+        import math as _m
+        def ruota(px, py, ang=-35):
+            a = _m.radians(ang)
+            return (cx + (px * _m.cos(a) - py * _m.sin(a)), cy + (px * _m.sin(a) + py * _m.cos(a)))
+        testa = [(-r * .55, -r * .75), (r * .25, -r * .75), (r * .25, -r * .3), (-r * .55, -r * .3)]
+        d.polygon([ruota(x, y) for x, y in testa], fill=col)
+        manico = [(-r * .1, -r * .3), (r * .05, -r * .3), (r * .05, r * .55), (-r * .1, r * .55)]
+        d.polygon([ruota(x, y) for x, y in manico], fill=col)
+        d.rounded_rectangle((cx - r * .2, cy + r * .62, cx + r * .9, cy + r * .82), radius=r * .06, fill=acc)
+    elif tipo == "percentuale":
+        d.ellipse((cx - r * .8, cy - r * .8, cx - r * .2, cy - r * .2), outline=col, width=w * 2)
+        d.ellipse((cx + r * .2, cy + r * .2, cx + r * .8, cy + r * .8), outline=col, width=w * 2)
+        d.line((cx + r * .7, cy - r * .8, cx - r * .7, cy + r * .8), fill=acc, width=w * 2)
+    elif tipo == "monitor":
+        d.rounded_rectangle((cx - r * .9, cy - r * .7, cx + r * .9, cy + r * .45), radius=r * .08, outline=col, width=w)
+        for k, lw in enumerate((.9, .6, .75)):
+            y = cy - r * .4 + k * r * .25
+            d.line((cx - r * .6, y, cx - r * .6 + r * 1.2 * lw, y), fill=acc if k == 0 else col, width=w)
+        d.rectangle((cx - r * .12, cy + r * .45, cx + r * .12, cy + r * .7), fill=col)
+        d.rectangle((cx - r * .45, cy + r * .7, cx + r * .45, cy + r * .8), fill=col)
     else:  # info
         d.ellipse((cx - r * .85, cy - r * .85, cx + r * .85, cy + r * .85), outline=col, width=w)
         d.ellipse((cx - r * .1, cy - r * .55, cx + r * .1, cy - r * .35), fill=acc)
@@ -1296,8 +1328,8 @@ def genera_grafica(img):
             y0 = cy - alt / 2 - top - gh * 0.03
             for k, riga in enumerate(righe):
                 d.text((x0, y0 + k * passo), riga, font=f, fill="white", anchor="ls")
-            yb = y0 + top + alt + gh * 0.06
-            d.rounded_rectangle((x0, yb, x0 + gh * 0.4, yb + gh * 0.04), radius=gh * 0.02, fill=hl)
+            yb = y0 + top + alt + gh * 0.1
+            d.rounded_rectangle((x0, yb, x0 + gh * 0.4, yb + gh * 0.035), radius=gh * 0.017, fill=hl)
     else:                                   # card verticale (accanto alla figura): icona sopra, parola sotto
         r = int(min(gw * 0.32, gh * 0.24))
         cx, cy = gw // 2, int(gh * 0.36)
@@ -1781,11 +1813,13 @@ def immagine_titolo(ft=None):
     tw = TITOLO_BOX[2] - TITOLO_BOX[0]
     col, hl = hex_rgb(COLORE_PRINCIPALE), hex_rgb(COLORE_EVIDENZIAZIONE)
     if "|" in TITOLO:
-        occhiello, testo = [x.strip().upper() for x in TITOLO.split("|", 1)]
+        parti = [x.strip().upper() for x in TITOLO.split("|")]
+        occhiello, testo, nota = parti[0], parti[1], (parti[2] if len(parti) > 2 else "")
         r1 = adatta_testo(ft, occhiello, tw - 56, 70, 64, 36, 1)
-        r2 = adatta_testo(ft, testo, tw - 56, 120, 50, 30, 2)
+        r2 = adatta_testo(ft, testo, tw - 56, 120, 50, 30, 2) or adatta_testo(ft, testo, tw - 56, 150, 44, 28, 3)
+        r3 = adatta_testo(ft, nota, tw - 56, 40, 32, 22, 1) if nota else None
         gap, pad = 14, 16
-        th = int(pad + r1[4] + gap + r2[4] + pad)
+        th = int(pad + r1[4] + gap + r2[4] + (gap + r3[4] if r3 else 0) + pad)
         img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
         img.paste(Image.new("RGBA", (tw, th), (*col, 235)), (0, 0), maschera_arrotondata(tw, th, 16))
         d = ImageDraw.Draw(img)
@@ -1795,6 +1829,19 @@ def immagine_titolo(ft=None):
         f, righe, passo, top, alt = r2
         for k, riga in enumerate(righe):
             d.text((tw / 2, y2 - top + k * passo), riga, font=f, fill="white", anchor="ms")
+        if r3:                                    # riga piccola: "ATTENZIONE:" in giallo, il resto bianco
+            y3 = y2 + alt + gap
+            f3, righe3, _p3, top3, _a3 = r3
+            riga = righe3[0]
+            pre, sep, post = riga.partition(":")
+            if not sep:
+                pre, post = "", riga
+            pre = pre + sep
+            x = tw / 2 - f3.getlength(riga) / 2
+            if pre:
+                d.text((x, y3 - top3), pre, font=f3, fill=(*hl, 255), anchor="ls")
+                x += f3.getlength(pre)
+            d.text((x, y3 - top3), post, font=f3, fill="white", anchor="ls")
     else:
         th = TITOLO_BOX[3] - TITOLO_BOX[1]
         img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
@@ -2362,10 +2409,42 @@ def crea_copertina(piano, fonts, dest):
     nero = Image.new("RGBA", (W, H), (0, 0, 0, 255))
     nero.putalpha(grad.resize((W, H)))
     img.alpha_composite(nero)
-    # titolo grande: prima parte bianca, dopo i ":" nel colore di evidenziazione
     ft = fonts["titolo"]["path"]
-    testo = TITOLO.upper().replace(" | ", ": ").replace("|", ": ")
     bw = SAFE[2] - SAFE[0]
+    giallo = hex_rgb(COLORE_EVIDENZIAZIONE)
+    if "|" in TITOLO:
+        # "occhiello | testo | nota": occhiello giallo grande, testo bianco, nota piccola ("ATTENZIONE:" in giallo)
+        parti = [x.strip().upper() for x in TITOLO.split("|")]
+        blocchi = [(parti[0], 120, 60, 1, 140), (parti[1], 80, 40, 4, 360)]
+        if len(parti) > 2:
+            blocchi.append((parti[2], 54, 28, 1, 70))
+        ris = [adatta_testo(ft, t, bw - 80, mh, pmax, pmin, nr) for t, pmax, pmin, nr, mh in blocchi]
+        gap, pad = 22, 40
+        bh = int(pad * 2 + sum(r[4] for r in ris) + gap * (len(ris) - 1))
+        by = SAFE[3] - 40 - bh if titolo_in_basso else SAFE[1] + 30
+        pann = Image.new("RGBA", (bw, bh), (*hex_rgb(COLORE_PRINCIPALE), 235))
+        img.paste(pann, (SAFE[0], by), maschera_arrotondata(bw, bh, 22))
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle((SAFE[0] + 40, by - 10, SAFE[0] + 200, by + 4), radius=7, fill=giallo)
+        y = by + pad
+        for i, (f, righe, passo, top, alt) in enumerate(ris):
+            for k, riga in enumerate(righe):
+                yy = y - top + k * passo
+                if i == 0:
+                    d.text((W / 2, yy), riga, font=f, fill=giallo, anchor="ms")
+                elif i == 2 and ":" in riga:
+                    pre, _sep, post = riga.partition(":")
+                    pre += ":"
+                    x = W / 2 - f.getlength(riga) / 2
+                    d.text((x, yy), pre, font=f, fill=giallo, anchor="ls")
+                    d.text((x + f.getlength(pre), yy), post, font=f, fill="white", anchor="ls")
+                else:
+                    d.text((W / 2, yy), riga, font=f, fill="white", anchor="ms")
+            y += alt + gap
+        img.convert("RGB").save(dest, quality=92)
+        return
+    # titolo grande: prima parte bianca, dopo i ":" nel colore di evidenziazione
+    testo = TITOLO.upper()
     ris = None
     for max_righe, px_min in ((2, 84), (3, 72), (4, 56)):      # meno righe possibile, ma testo grande
         ris = adatta_testo(ft, testo, bw - 2 * 40, 470, 128, px_min, max_righe, interlinea=1.04)
@@ -2377,18 +2456,14 @@ def crea_copertina(piano, fonts, dest):
     pann = Image.new("RGBA", (bw, bh), (*hex_rgb(COLORE_PRINCIPALE), 235))
     img.paste(pann, (SAFE[0], by), maschera_arrotondata(bw, bh, 22))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((SAFE[0] + 40, by - 10, SAFE[0] + 200, by + 4), radius=7, fill=hex_rgb(COLORE_EVIDENZIAZIONE))
+    d.rounded_rectangle((SAFE[0] + 40, by - 10, SAFE[0] + 200, by + 4), radius=7, fill=giallo)
     gialla = False
     y0 = by + 44 - top
     for k, r in enumerate(righe):
-        # colora in giallo le parole dopo i due punti
         parole = r.split(" ")
-        larg = f.getlength(r)
-        x = W / 2 - larg / 2
-        for j, p in enumerate(parole):
-            # con "occhiello | testo" è giallo l'occhiello, altrimenti la parte dopo i due punti
-            col = hex_rgb(COLORE_EVIDENZIAZIONE) if (gialla != ("|" in TITOLO)) else (255, 255, 255)
-            d.text((x, y0 + k * passo), p, font=f, fill=col, anchor="ls")
+        x = W / 2 - f.getlength(r) / 2
+        for p in parole:
+            d.text((x, y0 + k * passo), p, font=f, fill=giallo if gialla else (255, 255, 255), anchor="ls")
             x += f.getlength(p + " ")
             if p.endswith(":"):
                 gialla = True

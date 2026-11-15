@@ -35,7 +35,8 @@ Quando manda un video vuole il montaggio completo senza dover rispiegare nulla.
 
 ## Preferenze dell'utente (già impostate nello script; le più recenti valgono di più)
 - Formato feed 1080x1350 (4:5). Testo che scorre in basso.
-- **Scritta fissa sempre sopra la testa, mai sul viso**: `TITOLO = "OCCHIELLO | testo"`. L'occhiello va in
+- **Scritta fissa sempre sopra la testa, mai sul viso**: `TITOLO = "OCCHIELLO | testo"` oppure
+  `"OCCHIELLO | testo | nota"`: la nota va in una riga più piccola, con "ATTENZIONE:" in giallo. L'occhiello va in
   giallo (es. "NOVITÀ PENSIONI"), il resto in bianco. Lo script controlla che la scritta non tocchi la testa;
   se servisse, rimpicciolisce un po' il video.
 - **Sottotitoli: 1–3 parole alla volta, grandi (84 px), bianchi, ben evidenti** (`SUB_STILE = "parole"`).
@@ -49,3 +50,17 @@ Quando manda un video vuole il montaggio completo senza dover rispiegare nulla.
   solimandoemilio@libero.it, oppure "scrivi nei commenti".
 - Colori: blu #0B3D91 e giallo #FFD400, font Montserrat (ExtraBold per i titoli, SemiBold per i sottotitoli).
 - Audio normalizzato a -14 LUFS.
+- Consegna sempre anche una **versione leggera** (`<nome>_FACEBOOK_leggero.mp4`, circa 2,6 Mbps): dal telefono
+  l'utente non riesce a scaricare file da 100+ MB.
+
+## Note pratiche
+- **Primi piani mentre cammina, con occhiali da sole e cappellino:** il rilevamento del volto sbaglia. Misura a
+  occhio sui fotogrammi (`frame_base`): inizio del cappellino, bocca, centro del viso. Imposta a mano `zoom` nel
+  piano (`scala`, `x`, `y`, `riposo`) con `sopra_testa` e `CARD_SOPRA_ALTEZZA` ~230. La bocca deve restare sopra
+  y≈950, cioè sopra i sottotitoli.
+- Il vocabolario dei concetti è pensato per le pensioni. Per altri argomenti (es. immobili/NPL) pianifica le card a
+  mano nel piano, con `concetto` (per l'icona, vedi `ICONE`) ed `etichetta`.
+- Se i video dal telefono sono troppo pesanti per la chat: WhatsApp a se stessi in qualità normale, oppure
+  dividere il video in parti (le riunisco io).
+- L'utente fa anche eventi immobiliari (acquisto immobili dalle banche prima dell'asta, "non è saldo e
+  stralcio"), con Studio Legale Solimando / Solimando Capital.
