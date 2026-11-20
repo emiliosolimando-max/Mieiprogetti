@@ -25,8 +25,8 @@ font, badge, scrivi, testo_adatto, a_capo, elenco = (cs.font, cs.badge, cs.scriv
 
 ANNO = "2007"
 EMAIL = "solimandoemilio@libero.it"
-LINK = "verifica-pensione-difesa.lovable.app"
-URL_QR = "https://verifica-pensione-difesa.lovable.app/?utm_source=video_slide_pensioni"
+LINK = "ricalcolo-pensione-inps-inpdap.lovable.app"
+URL_QR = "https://ricalcolo-pensione-inps-inpdap.lovable.app/?utm_source=video_slide_pensioni"
 
 
 def crea_logo(fd, dest):
