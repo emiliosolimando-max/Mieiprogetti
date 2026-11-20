@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ricalcolo della pensione INPS ed ex INPDAP – Studio Legale Solimando</title>
+  <meta name="description" content="Sei andato in pensione dal 2007 in poi? Pensioni INPS ed ex INPDAP: verifica se la tua pensione può essere ricalcolata, con aumento dell'importo mensile e arretrati.">
+  <meta property="og:title" content="Ricalcolo della pensione INPS ed ex INPDAP – dal 2007 in poi">
+  <meta property="og:description" content="Migliaia di pensionati in tutta Italia hanno già ottenuto il ricalcolo. Verifica se rientri anche tu.">
+  <meta property="og:image" content="copertina.jpg">
+  <meta name="theme-color" content="#0B3D91">
+  <link rel="preload" href="fonts/montserrat-extrabold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<header class="testata">
+  <div class="contenitore">
+    <img class="logo" src="logo-studio.png" alt="Studio Legale Solimando" width="668" height="179">
+    <span class="occhiello">PENSIONI INPS ED EX INPDAP</span>
+    <h1>Ricalcolo della pensione per chi è andato in pensione dal 2007 in poi</h1>
+    <p class="sottotitolo">Migliaia di pensionati in tutta Italia hanno già ottenuto il ricalcolo:
+      <strong>importo mensile della pensione aumentato, vita natural durante</strong>, con gli
+      <strong>annessi arretrati</strong>.</p>
+    <div class="numeri">
+      <div><b>30 anni</b><span>di esperienza in materia pensionistica</span></div>
+      <div><b>Tutta Italia</b><span>numerosi provvedimenti ottenuti</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="contenitore">
+  <section class="scheda" aria-labelledby="titolo-modulo">
+    <form id="modulo" novalidate>
+      <h2 id="titolo-modulo">Verifica se rientri anche tu</h2>
+      <p class="nota">Compila il modulo: sarai contattato secondo la priorità acquisita.</p>
+      <div class="riga">
+        <div class="campo">
+          <label for="nome">Nome</label>
+          <input id="nome" name="nome" type="text" autocomplete="given-name" required>
+          <div class="msg-errore">Inserisci il nome</div>
+        </div>
+        <div class="campo">
+          <label for="cognome">Cognome</label>
+          <input id="cognome" name="cognome" type="text" autocomplete="family-name" required>
+          <div class="msg-errore">Inserisci il cognome</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="telefono">Numero di telefono</label>
+        <input id="telefono" name="telefono" type="tel" autocomplete="tel" inputmode="tel" required
+               placeholder="es. 333 1234567">
+        <div class="msg-errore">Inserisci un numero di telefono valido</div>
+      </div>
+      <div class="campo">
+        <label for="email">Indirizzo email</label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
+        <div class="msg-errore">Inserisci un indirizzo email valido</div>
+      </div>
+      <div class="campo">
+        <label for="tipo">Sei pensionato</label>
+        <select id="tipo" name="tipo" required>
+          <option value="">Scegli…</option>
+          <option>Pensionato INPS</option>
+          <option>Pensionato ex INPDAP</option>
+          <option>Non ancora in pensione, con invalidità ordinaria</option>
+        </select>
+        <div class="msg-errore">Indica se sei pensionato INPS o ex INPDAP</div>
+      </div>
+      <div class="campo">
+        <label for="importo">Pensione lorda mensile che percepisci</label>
+        <div class="euro">
+          <input id="importo" name="importo" type="text" inputmode="decimal" required placeholder="es. 1.850">
+        </div>
+        <div class="aiuto">L'importo lordo che trovi sul cedolino della pensione.</div>
+        <div class="msg-errore">Indica l'importo lordo della pensione</div>
+      </div>
+      <!-- campo trappola contro lo spam automatico: le persone non lo vedono -->
+      <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true"
+             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <label class="consenso" id="c-privacy">
+        <input type="checkbox" name="consenso_privacy" required>
+        <span class="testo-consenso">Ho letto l'<a href="privacy.html" target="_blank" rel="noopener">informativa
+          privacy</a> e acconsento al trattamento dei miei dati per essere ricontattato in merito alla mia
+          richiesta. <b>(obbligatorio)</b>
+          <span class="msg-errore">Per inviare la richiesta serve questo consenso</span></span>
+      </label>
+      <label class="consenso">
+        <input type="checkbox" name="consenso_aggiornamenti">
+        <span class="testo-consenso">Acconsento a ricevere aggiornamenti e comunicazioni informative dello Studio
+          sulle novità in materia pensionistica. (facoltativo)</span>
+      </label>
+      <button class="bottone" type="submit">Richiedi il controllo →</button>
+      <p class="sicuro">I tuoi dati sono usati solo per ricontattarti e non vengono ceduti a terzi.</p>
+      <div class="esito-errore" role="alert"></div>
+    </form>
+
+    <div class="grazie" id="grazie" role="status" tabindex="-1">
+      <div class="spunta">✓</div>
+      <h2>Grazie, richiesta ricevuta!</h2>
+      <p>Sarai contattato secondo la priorità acquisita per verificare se la tua pensione può essere ricalcolata.</p>
+      <p>Se preferisci, puoi scriverci a <a href="mailto:solimandoemilio@libero.it">solimandoemilio@libero.it</a></p>
+    </div>
+  </section>
+
+  <section class="sezione">
+    <h3>Non sono i conteggi del patronato</h3>
+    <div class="riquadro">
+      <p>I nostri conteggi sono <b>diversi da quelli offerti dal patronato</b>: esaminiamo la pensione con un
+        metodo che lo Studio applica da <b>30 anni</b> in materia pensionistica.</p>
+      <p>Ad oggi ci sono <b>tantissimi provvedimenti in tutta Italia</b> che hanno riconosciuto il ricalcolo.</p>
+    </div>
+  </section>
+
+  <section class="sezione">
+    <h3>Cosa si ottiene</h3>
+    <ul class="punti">
+      <li><b>Importo mensile della pensione aumentato</b>, vita natural durante</li>
+      <li>Gli <b>annessi arretrati</b></li>
+    </ul>
+  </section>
+
+  <section class="sezione">
+    <h3>Chi può chiedere il controllo</h3>
+    <ul class="punti">
+      <li><b>Pensionati INPS</b> andati in pensione <b>dal 2007 in poi</b></li>
+      <li><b>Pensionati ex INPDAP</b> andati in pensione <b>dal 2007 in poi</b></li>
+      <li>Anche le <b>pensioni di reversibilità</b> andrebbero riviste</li>
+    </ul>
+    <p>Il presupposto è <b>essere già andati in pensione</b>. L'unica eccezione riguarda chi ha
+      un'<b>invalidità ordinaria</b>: anche se non è ancora in pensione, può chiedere il controllo per il
+      ricalcolo.</p>
+  </section>
+
+  <section class="sezione">
+    <h3>Pensionati ex INPDAP: il comparto pubblico</h3>
+    <p>Ad esempio:</p>
+    <ul class="corpi">
+      <li>Forze Armate</li><li>Forze dell'Ordine</li><li>Ministeri</li><li>Insegnanti</li>
+      <li>Vigili del Fuoco</li><li>Dirigenti</li><li>Medici</li><li>Agenzia delle Entrate</li>
+    </ul>
+    <p class="nota-esempio">Elenco a titolo esemplificativo e non esaustivo: sono solo alcune delle categorie
+      interessate.</p>
+  </section>
+
+  <section class="sezione">
+    <h3>Come funziona</h3>
+    <ol class="passi">
+      <li><span>Compili il modulo con i tuoi dati e l'importo lordo della pensione.</span></li>
+      <li><span>Sarai contattato secondo la priorità acquisita.</span></li>
+      <li><span>Esaminiamo la tua pensione e ti diciamo se può essere ricalcolata.</span></li>
+    </ol>
+    <p class="avviso">L'eventuale diritto al ricalcolo e agli arretrati dipende dalla singola posizione e va
+      verificato caso per caso.</p>
+  </section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p><b>Studio Legale Solimando</b> – da 30 anni ci occupiamo di materia pensionistica</p>
+    <p>Email: <a href="mailto:solimandoemilio@libero.it">solimandoemilio@libero.it</a> ·
+      <a href="privacy.html">Informativa privacy</a></p>
+  </div>
+</footer>
+
+<script>
+  // Web3Forms inoltra ogni richiesta a solimandoemilio@libero.it (la chiave è pubblica: indica solo la casella).
+  const INDIRIZZO_INVIO = "https://api.web3forms.com/submit";
+  const WEB3FORMS_ACCESS_KEY = "5a25316e-256d-4d78-afaf-42a37cbda033";
+
+  const modulo = document.getElementById("modulo");
+  const esitoErrore = modulo.querySelector(".esito-errore");
+  const bottone = modulo.querySelector(".bottone");
+
+  function importoNumerico(v) {
+    // accetta "1.850", "1850,50", "€ 1 850"
+    let s = v.replace(/[€\s]/g, "");
+    if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  const controlli = {
+    nome: v => v.trim().length >= 2,
+    cognome: v => v.trim().length >= 2,
+    telefono: v => v.replace(/[\s.\-\/()]/g, "").replace(/^(\+|00)39/, "").match(/^\+?\d{8,13}$/) !== null,
+    email: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()),
+    tipo: v => v !== "",
+    importo: v => importoNumerico(v) >= 50 && importoNumerico(v) < 100000,
+  };
+
+  function verificaCampo(nome) {
+    const input = modulo.elements[nome];
+    const ok = controlli[nome](input.value);
+    input.closest(".campo").classList.toggle("invalido", !ok);
+    input.setAttribute("aria-invalid", String(!ok));
+    return ok;
+  }
+
+  for (const nome of Object.keys(controlli)) {
+    const ev = modulo.elements[nome].tagName === "SELECT" ? "change" : "blur";
+    modulo.elements[nome].addEventListener(ev, () => {
+      if (modulo.elements[nome].value) verificaCampo(nome);
+    });
+    modulo.elements[nome].addEventListener("input", () => {
+      if (modulo.elements[nome].closest(".campo").classList.contains("invalido")) verificaCampo(nome);
+    });
+  }
+
+  modulo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    esitoErrore.style.display = "none";
+    let tuttoOk = true;
+    let primo = null;
+    for (const nome of Object.keys(controlli)) {
+      if (!verificaCampo(nome)) { tuttoOk = false; primo = primo || modulo.elements[nome]; }
+    }
+    const privacy = modulo.elements.consenso_privacy;
+    document.getElementById("c-privacy").classList.toggle("invalido", !privacy.checked);
+    if (!privacy.checked) { tuttoOk = false; primo = primo || privacy; }
+    if (!tuttoOk) { primo.focus(); return; }
+    if (modulo.elements._honey.value) return;          // compilato da un programma automatico
+
+    const importo = importoNumerico(modulo.elements.importo.value);
+    const dati = {
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: "Nuova richiesta ricalcolo pensione (" + modulo.elements.tipo.value + ")",
+      from_name: "Landing ricalcolo pensione INPS / ex INPDAP",
+      nome: modulo.elements.nome.value.trim(),
+      cognome: modulo.elements.cognome.value.trim(),
+      telefono: modulo.elements.telefono.value.trim(),
+      email: modulo.elements.email.value.trim(),
+      pensionato: modulo.elements.tipo.value,
+      pensione_lorda_mensile: "€ " + importo.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      consenso_privacy: "Sì",
+      consenso_aggiornamenti: modulo.elements.consenso_aggiornamenti.checked ? "Sì" : "No",
+      data_richiesta: new Date().toLocaleString("it-IT"),
+      provenienza: new URLSearchParams(location.search).get("utm_source") || document.referrer || "diretto",
+    };
+
+    bottone.disabled = true;
+    bottone.textContent = "Invio in corso…";
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      const risposta = await fetch(INDIRIZZO_INVIO, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(dati),
+        signal: ctrl.signal,
+      });
+      if (!risposta.ok) throw new Error("HTTP " + risposta.status);
+      const esito = await risposta.json().catch(() => ({}));
+      if (esito.success !== true) throw new Error(esito.message || "non inviato");
+      modulo.style.display = "none";
+      const grazie = document.getElementById("grazie");
+      grazie.style.display = "block";
+      grazie.focus();
+      if (typeof fbq === "function") fbq("track", "Lead");
+    } catch (err) {
+      esitoErrore.textContent = "Non siamo riusciti a inviare la richiesta. Riprova tra poco oppure scrivi a " +
+        "solimandoemilio@libero.it";
+      esitoErrore.style.display = "block";
+      bottone.disabled = false;
+      bottone.textContent = "Richiedi il controllo →";
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+</script>
+</body>
+</html>
