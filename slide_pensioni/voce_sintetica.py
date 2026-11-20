@@ -11,8 +11,8 @@ import sherpa_onnx
 
 LENTEZZA = 1.15   # >1 = più lenta e scandita
 TESTI = [
-    "Ricalcolo della pensione. Pensioni Inps, ed ex Inpdap. Sei in pensione dal duemiladiciassette in poi?",
-    "Se sei in pensione dal duemiladiciassette in poi, possiamo controllare la tua pensione, Inps o ex Inpdap, "
+    "Ricalcolo della pensione. Pensioni Inps, ed ex Inpdap. Sei in pensione dal duemilasette in poi?",
+    "Se sei in pensione dal duemilasette in poi, possiamo controllare la tua pensione, Inps o ex Inpdap, "
     "per verificare se può essere ricalcolata.",
     "Sono ormai migliaia i pensionati, in tutta Italia, che hanno già ottenuto il ricalcolo.",
     "Hanno ottenuto un aumento mensile della pensione, per tutta la vita, vita natural durante. "

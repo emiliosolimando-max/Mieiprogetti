@@ -23,7 +23,7 @@ W, H = cs.W, cs.H
 font, badge, scrivi, testo_adatto, a_capo, elenco = (cs.font, cs.badge, cs.scrivi, cs.testo_adatto, cs.a_capo,
                                                      cs.elenco)
 
-ANNO = "2017"
+ANNO = "2007"
 EMAIL = "solimandoemilio@libero.it"
 LINK = "verifica-pensione-difesa.lovable.app"
 URL_QR = "https://verifica-pensione-difesa.lovable.app/?utm_source=video_slide_pensioni"

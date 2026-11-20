@@ -1,6 +1,6 @@
 # Slide ricalcolo pensioni INPS ed ex INPDAP (Studio Legale Solimando)
 
-- `slide/slide_pensioni_con_voce.mp4` – 5 slide 16:9 con voce femminile ("Paola"), 44 s, -14 LUFS.
+- `slide/slide_pensioni_con_voce.mp4` – 5 slide 16:9 con voce femminile ("Paola"), 43 s, -14 LUFS.
 - `slide/slide_pensioni.pdf` e `slide/slide_01.png` … `slide_05.png` – le slide.
 - `logo_studio_bianco.png` – logo testuale (bilancia + STUDIO LEGALE SOLIMANDO), generato dallo script.
 - `immagini/copertina.jpg` – foto di copertina generata con Gamma.
