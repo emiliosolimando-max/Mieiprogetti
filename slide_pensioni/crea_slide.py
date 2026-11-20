@@ -57,7 +57,7 @@ def slide_copertina(fd, img, logo):
 def slide_icona(fd, logo, titolo, voci, icona, nota=None, px=66):
     tela = Image.new("RGB", (W, H), BLU)
     d = ImageDraw.Draw(tela)
-    cs.metti_logo(tela, logo, 70, 50, 400)
+    cs.metti_logo(tela, logo, 70, 45, 440)
     d.ellipse((1250, 230, 1810, 790), fill=BLU2)
     _disegna_icona(d, icona, 1530, 510, 200, BIANCO, GIALLO)
     x, larg = 90, 1080
@@ -72,7 +72,7 @@ def slide_icona(fd, logo, titolo, voci, icona, nota=None, px=66):
 def slide_finale(fd, logo, qr_png):
     tela = Image.new("RGB", (W, H), BLU)
     d = ImageDraw.Draw(tela)
-    cs.metti_logo(tela, logo, (W - 460) // 2, 45, 460)
+    cs.metti_logo(tela, logo, (W - 480) // 2, 40, 480)
     f = font(fd, "Black", 84)
     for k, t in enumerate(("VUOI SAPERE SE RIENTRI", "ANCHE TU?")):
         d.text(((W - d.textlength(t, font=f)) / 2, 200 + k * 92), t, font=f, fill=BIANCO if k == 0 else GIALLO)
@@ -105,7 +105,9 @@ def main():
     a = ap.parse_args()
     fd, out = a.font_dir, Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    logo = crea_logo(fd, QUI / "logo_studio_bianco.png")
+    logo = QUI / "logo_studio.png"          # logo vero dello Studio, ritagliato senza sfondo
+    if not logo.exists():
+        logo = crea_logo(fd, QUI / "logo_provvisorio.png")
     import qrcode
     qrcode.make(URL_QR, border=1, box_size=10).save(out / "_qr.png")
     slide = [

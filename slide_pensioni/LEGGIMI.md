@@ -2,7 +2,7 @@
 
 - `slide/slide_pensioni_con_voce.mp4` – 5 slide 16:9 con voce femminile ("Paola"), 43 s, -14 LUFS.
 - `slide/slide_pensioni.pdf` e `slide/slide_01.png` … `slide_05.png` – le slide.
-- `logo_studio_bianco.png` – logo testuale (bilancia + STUDIO LEGALE SOLIMANDO), generato dallo script.
+- `logo_studio.png` – logo dello Studio (ritagliato senza sfondo da `immagini/logo_originale.jpg`).
 - `immagini/copertina.jpg` – foto di copertina generata con Gamma.
 
 Rigenera (anno, email e link sono in cima a `crea_slide.py`; testi della voce in `voce_sintetica.py`):
